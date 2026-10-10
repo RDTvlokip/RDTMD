@@ -1,0 +1,686 @@
+{
+  "name": "RDTMD",
+  "scopeName": "source.rdtmd",
+  "patterns": [
+    { "include": "#fence" },
+    { "include": "#mathblock" },
+    { "include": "#chart" },
+    { "include": "#diagram" },
+    { "include": "#tabs" },
+    { "include": "#metrics" },
+    { "include": "#chat" },
+    { "include": "#details" },
+    { "include": "#directive" },
+    { "include": "#include" },
+    { "include": "#heading" },
+    { "include": "#hr" },
+    { "include": "#tablesep" },
+    { "include": "#quote" },
+    { "include": "#list" },
+    { "include": "#inline" }
+  ],
+  "repository": {
+    "fence": {
+      "patterns": [
+        { "include": "#fence-python" },
+        { "include": "#fence-js" },
+        { "include": "#fence-ts" },
+        { "include": "#fence-json" },
+        { "include": "#fence-html" },
+        { "include": "#fence-css" },
+        { "include": "#fence-c" },
+        { "include": "#fence-cpp" },
+        { "include": "#fence-csharp" },
+        { "include": "#fence-java" },
+        { "include": "#fence-go" },
+        { "include": "#fence-rust" },
+        { "include": "#fence-shell" },
+        { "include": "#fence-powershell" },
+        { "include": "#fence-batch" },
+        { "include": "#fence-ruby" },
+        { "include": "#fence-kotlin" },
+        { "include": "#fence-swift" },
+        { "include": "#fence-lua" },
+        { "include": "#fence-php" },
+        { "include": "#fence-sql" },
+        { "include": "#fence-yaml" },
+        { "include": "#fence-toml" },
+        { "include": "#fence-ini" },
+        { "include": "#fence-docker" },
+        { "include": "#fence-make" },
+        { "include": "#fence-diff" },
+        { "include": "#fence-latex" },
+        { "include": "#fence-r" },
+        { "include": "#fence-perl" },
+        { "include": "#fence-markdown" },
+        { "include": "#fence-nginx" },
+        { "include": "#fence-graphql" },
+        { "include": "#fence-generic" }
+      ]
+    },
+    "fence-python": {
+      "begin": "^\\s{0,3}(`{3,})\\s*(python|py)\\b.*$",
+      "end": "^\\s{0,3}\\1`*\\s*$",
+      "name": "markup.fenced_code.block.rdtmd",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.markdown.rdtmd" },
+        "2": { "name": "fenced_code.block.language.rdtmd" }
+      },
+      "endCaptures": { "0": { "name": "punctuation.definition.markdown.rdtmd" } },
+      "patterns": [{ "include": "source.python" }]
+    },
+    "fence-js": {
+      "begin": "^\\s{0,3}(`{3,})\\s*(javascript|js|jsx|mjs|cjs)\\b.*$",
+      "end": "^\\s{0,3}\\1`*\\s*$",
+      "name": "markup.fenced_code.block.rdtmd",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.markdown.rdtmd" },
+        "2": { "name": "fenced_code.block.language.rdtmd" }
+      },
+      "endCaptures": { "0": { "name": "punctuation.definition.markdown.rdtmd" } },
+      "patterns": [{ "include": "source.js" }]
+    },
+    "fence-ts": {
+      "begin": "^\\s{0,3}(`{3,})\\s*(typescript|ts|tsx)\\b.*$",
+      "end": "^\\s{0,3}\\1`*\\s*$",
+      "name": "markup.fenced_code.block.rdtmd",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.markdown.rdtmd" },
+        "2": { "name": "fenced_code.block.language.rdtmd" }
+      },
+      "endCaptures": { "0": { "name": "punctuation.definition.markdown.rdtmd" } },
+      "patterns": [{ "include": "source.ts" }]
+    },
+    "fence-json": {
+      "begin": "^\\s{0,3}(`{3,})\\s*(json|jsonc)\\b.*$",
+      "end": "^\\s{0,3}\\1`*\\s*$",
+      "name": "markup.fenced_code.block.rdtmd",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.markdown.rdtmd" },
+        "2": { "name": "fenced_code.block.language.rdtmd" }
+      },
+      "endCaptures": { "0": { "name": "punctuation.definition.markdown.rdtmd" } },
+      "patterns": [{ "include": "source.json" }]
+    },
+    "fence-html": {
+      "begin": "^\\s{0,3}(`{3,})\\s*(html|xml|svg)\\b.*$",
+      "end": "^\\s{0,3}\\1`*\\s*$",
+      "name": "markup.fenced_code.block.rdtmd",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.markdown.rdtmd" },
+        "2": { "name": "fenced_code.block.language.rdtmd" }
+      },
+      "endCaptures": { "0": { "name": "punctuation.definition.markdown.rdtmd" } },
+      "patterns": [{ "include": "text.html.basic" }]
+    },
+    "fence-css": {
+      "begin": "^\\s{0,3}(`{3,})\\s*(css)\\b.*$",
+      "end": "^\\s{0,3}\\1`*\\s*$",
+      "name": "markup.fenced_code.block.rdtmd",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.markdown.rdtmd" },
+        "2": { "name": "fenced_code.block.language.rdtmd" }
+      },
+      "endCaptures": { "0": { "name": "punctuation.definition.markdown.rdtmd" } },
+      "patterns": [{ "include": "source.css" }]
+    },
+    "fence-c": {
+      "begin": "^\\s{0,3}(`{3,})\\s*(c|h)\\b.*$",
+      "end": "^\\s{0,3}\\1`*\\s*$",
+      "name": "markup.fenced_code.block.rdtmd",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.markdown.rdtmd" },
+        "2": { "name": "fenced_code.block.language.rdtmd" }
+      },
+      "endCaptures": { "0": { "name": "punctuation.definition.markdown.rdtmd" } },
+      "patterns": [{ "include": "source.c" }]
+    },
+    "fence-cpp": {
+      "begin": "^\\s{0,3}(`{3,})\\s*(cpp|c\\+\\+|cxx|cc|hpp)\\b.*$",
+      "end": "^\\s{0,3}\\1`*\\s*$",
+      "name": "markup.fenced_code.block.rdtmd",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.markdown.rdtmd" },
+        "2": { "name": "fenced_code.block.language.rdtmd" }
+      },
+      "endCaptures": { "0": { "name": "punctuation.definition.markdown.rdtmd" } },
+      "patterns": [{ "include": "source.cpp" }]
+    },
+    "fence-csharp": {
+      "begin": "^\\s{0,3}(`{3,})\\s*(csharp|cs)\\b.*$",
+      "end": "^\\s{0,3}\\1`*\\s*$",
+      "name": "markup.fenced_code.block.rdtmd",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.markdown.rdtmd" },
+        "2": { "name": "fenced_code.block.language.rdtmd" }
+      },
+      "endCaptures": { "0": { "name": "punctuation.definition.markdown.rdtmd" } },
+      "patterns": [{ "include": "source.cs" }]
+    },
+    "fence-java": {
+      "begin": "^\\s{0,3}(`{3,})\\s*(java)\\b.*$",
+      "end": "^\\s{0,3}\\1`*\\s*$",
+      "name": "markup.fenced_code.block.rdtmd",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.markdown.rdtmd" },
+        "2": { "name": "fenced_code.block.language.rdtmd" }
+      },
+      "endCaptures": { "0": { "name": "punctuation.definition.markdown.rdtmd" } },
+      "patterns": [{ "include": "source.java" }]
+    },
+    "fence-go": {
+      "begin": "^\\s{0,3}(`{3,})\\s*(go|golang)\\b.*$",
+      "end": "^\\s{0,3}\\1`*\\s*$",
+      "name": "markup.fenced_code.block.rdtmd",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.markdown.rdtmd" },
+        "2": { "name": "fenced_code.block.language.rdtmd" }
+      },
+      "endCaptures": { "0": { "name": "punctuation.definition.markdown.rdtmd" } },
+      "patterns": [{ "include": "source.go" }]
+    },
+    "fence-rust": {
+      "begin": "^\\s{0,3}(`{3,})\\s*(rust|rs)\\b.*$",
+      "end": "^\\s{0,3}\\1`*\\s*$",
+      "name": "markup.fenced_code.block.rdtmd",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.markdown.rdtmd" },
+        "2": { "name": "fenced_code.block.language.rdtmd" }
+      },
+      "endCaptures": { "0": { "name": "punctuation.definition.markdown.rdtmd" } },
+      "patterns": [{ "include": "source.rust" }]
+    },
+    "fence-shell": {
+      "begin": "^\\s{0,3}(`{3,})\\s*(bash|sh|shell|zsh)\\b.*$",
+      "end": "^\\s{0,3}\\1`*\\s*$",
+      "name": "markup.fenced_code.block.rdtmd",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.markdown.rdtmd" },
+        "2": { "name": "fenced_code.block.language.rdtmd" }
+      },
+      "endCaptures": { "0": { "name": "punctuation.definition.markdown.rdtmd" } },
+      "patterns": [{ "include": "source.shell" }]
+    },
+    "fence-powershell": {
+      "begin": "^\\s{0,3}(`{3,})\\s*(powershell|ps1|ps)\\b.*$",
+      "end": "^\\s{0,3}\\1`*\\s*$",
+      "name": "markup.fenced_code.block.rdtmd",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.markdown.rdtmd" },
+        "2": { "name": "fenced_code.block.language.rdtmd" }
+      },
+      "endCaptures": { "0": { "name": "punctuation.definition.markdown.rdtmd" } },
+      "patterns": [{ "include": "source.powershell" }]
+    },
+    "fence-batch": {
+      "begin": "^\\s{0,3}(`{3,})\\s*(batch|bat|cmd)\\b.*$",
+      "end": "^\\s{0,3}\\1`*\\s*$",
+      "name": "markup.fenced_code.block.rdtmd",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.markdown.rdtmd" },
+        "2": { "name": "fenced_code.block.language.rdtmd" }
+      },
+      "endCaptures": { "0": { "name": "punctuation.definition.markdown.rdtmd" } },
+      "patterns": [{ "include": "source.batchfile" }]
+    },
+    "fence-ruby": {
+      "begin": "^\\s{0,3}(`{3,})\\s*(ruby|rb)\\b.*$",
+      "end": "^\\s{0,3}\\1`*\\s*$",
+      "name": "markup.fenced_code.block.rdtmd",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.markdown.rdtmd" },
+        "2": { "name": "fenced_code.block.language.rdtmd" }
+      },
+      "endCaptures": { "0": { "name": "punctuation.definition.markdown.rdtmd" } },
+      "patterns": [{ "include": "source.ruby" }]
+    },
+    "fence-kotlin": {
+      "begin": "^\\s{0,3}(`{3,})\\s*(kotlin|kt)\\b.*$",
+      "end": "^\\s{0,3}\\1`*\\s*$",
+      "name": "markup.fenced_code.block.rdtmd",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.markdown.rdtmd" },
+        "2": { "name": "fenced_code.block.language.rdtmd" }
+      },
+      "endCaptures": { "0": { "name": "punctuation.definition.markdown.rdtmd" } },
+      "patterns": [{ "include": "source.kotlin" }]
+    },
+    "fence-swift": {
+      "begin": "^\\s{0,3}(`{3,})\\s*(swift)\\b.*$",
+      "end": "^\\s{0,3}\\1`*\\s*$",
+      "name": "markup.fenced_code.block.rdtmd",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.markdown.rdtmd" },
+        "2": { "name": "fenced_code.block.language.rdtmd" }
+      },
+      "endCaptures": { "0": { "name": "punctuation.definition.markdown.rdtmd" } },
+      "patterns": [{ "include": "source.swift" }]
+    },
+    "fence-lua": {
+      "begin": "^\\s{0,3}(`{3,})\\s*(lua)\\b.*$",
+      "end": "^\\s{0,3}\\1`*\\s*$",
+      "name": "markup.fenced_code.block.rdtmd",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.markdown.rdtmd" },
+        "2": { "name": "fenced_code.block.language.rdtmd" }
+      },
+      "endCaptures": { "0": { "name": "punctuation.definition.markdown.rdtmd" } },
+      "patterns": [{ "include": "source.lua" }]
+    },
+    "fence-php": {
+      "begin": "^\\s{0,3}(`{3,})\\s*(php)\\b.*$",
+      "end": "^\\s{0,3}\\1`*\\s*$",
+      "name": "markup.fenced_code.block.rdtmd",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.markdown.rdtmd" },
+        "2": { "name": "fenced_code.block.language.rdtmd" }
+      },
+      "endCaptures": { "0": { "name": "punctuation.definition.markdown.rdtmd" } },
+      "patterns": [{ "include": "source.php" }]
+    },
+    "fence-sql": {
+      "begin": "^\\s{0,3}(`{3,})\\s*(sql)\\b.*$",
+      "end": "^\\s{0,3}\\1`*\\s*$",
+      "name": "markup.fenced_code.block.rdtmd",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.markdown.rdtmd" },
+        "2": { "name": "fenced_code.block.language.rdtmd" }
+      },
+      "endCaptures": { "0": { "name": "punctuation.definition.markdown.rdtmd" } },
+      "patterns": [{ "include": "source.sql" }]
+    },
+    "fence-yaml": {
+      "begin": "^\\s{0,3}(`{3,})\\s*(yaml|yml)\\b.*$",
+      "end": "^\\s{0,3}\\1`*\\s*$",
+      "name": "markup.fenced_code.block.rdtmd",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.markdown.rdtmd" },
+        "2": { "name": "fenced_code.block.language.rdtmd" }
+      },
+      "endCaptures": { "0": { "name": "punctuation.definition.markdown.rdtmd" } },
+      "patterns": [{ "include": "source.yaml" }]
+    },
+    "fence-toml": {
+      "begin": "^\\s{0,3}(`{3,})\\s*(toml)\\b.*$",
+      "end": "^\\s{0,3}\\1`*\\s*$",
+      "name": "markup.fenced_code.block.rdtmd",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.markdown.rdtmd" },
+        "2": { "name": "fenced_code.block.language.rdtmd" }
+      },
+      "endCaptures": { "0": { "name": "punctuation.definition.markdown.rdtmd" } },
+      "patterns": [{ "include": "source.toml" }]
+    },
+    "fence-ini": {
+      "begin": "^\\s{0,3}(`{3,})\\s*(ini)\\b.*$",
+      "end": "^\\s{0,3}\\1`*\\s*$",
+      "name": "markup.fenced_code.block.rdtmd",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.markdown.rdtmd" },
+        "2": { "name": "fenced_code.block.language.rdtmd" }
+      },
+      "endCaptures": { "0": { "name": "punctuation.definition.markdown.rdtmd" } },
+      "patterns": [{ "include": "source.ini" }]
+    },
+    "fence-docker": {
+      "begin": "^\\s{0,3}(`{3,})\\s*(dockerfile|docker)\\b.*$",
+      "end": "^\\s{0,3}\\1`*\\s*$",
+      "name": "markup.fenced_code.block.rdtmd",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.markdown.rdtmd" },
+        "2": { "name": "fenced_code.block.language.rdtmd" }
+      },
+      "endCaptures": { "0": { "name": "punctuation.definition.markdown.rdtmd" } },
+      "patterns": [{ "include": "source.dockerfile" }]
+    },
+    "fence-make": {
+      "begin": "^\\s{0,3}(`{3,})\\s*(makefile|make)\\b.*$",
+      "end": "^\\s{0,3}\\1`*\\s*$",
+      "name": "markup.fenced_code.block.rdtmd",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.markdown.rdtmd" },
+        "2": { "name": "fenced_code.block.language.rdtmd" }
+      },
+      "endCaptures": { "0": { "name": "punctuation.definition.markdown.rdtmd" } },
+      "patterns": [{ "include": "source.makefile" }]
+    },
+    "fence-diff": {
+      "begin": "^\\s{0,3}(`{3,})\\s*(diff)\\b.*$",
+      "end": "^\\s{0,3}\\1`*\\s*$",
+      "name": "markup.fenced_code.block.rdtmd",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.markdown.rdtmd" },
+        "2": { "name": "fenced_code.block.language.rdtmd" }
+      },
+      "endCaptures": { "0": { "name": "punctuation.definition.markdown.rdtmd" } },
+      "patterns": [{ "include": "source.diff" }]
+    },
+    "fence-latex": {
+      "begin": "^\\s{0,3}(`{3,})\\s*(latex|tex)\\b.*$",
+      "end": "^\\s{0,3}\\1`*\\s*$",
+      "name": "markup.fenced_code.block.rdtmd",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.markdown.rdtmd" },
+        "2": { "name": "fenced_code.block.language.rdtmd" }
+      },
+      "endCaptures": { "0": { "name": "punctuation.definition.markdown.rdtmd" } },
+      "patterns": [{ "include": "text.tex.latex" }]
+    },
+    "fence-r": {
+      "begin": "^\\s{0,3}(`{3,})\\s*(r)\\b.*$",
+      "end": "^\\s{0,3}\\1`*\\s*$",
+      "name": "markup.fenced_code.block.rdtmd",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.markdown.rdtmd" },
+        "2": { "name": "fenced_code.block.language.rdtmd" }
+      },
+      "endCaptures": { "0": { "name": "punctuation.definition.markdown.rdtmd" } },
+      "patterns": [{ "include": "source.r" }]
+    },
+    "fence-perl": {
+      "begin": "^\\s{0,3}(`{3,})\\s*(perl|pl)\\b.*$",
+      "end": "^\\s{0,3}\\1`*\\s*$",
+      "name": "markup.fenced_code.block.rdtmd",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.markdown.rdtmd" },
+        "2": { "name": "fenced_code.block.language.rdtmd" }
+      },
+      "endCaptures": { "0": { "name": "punctuation.definition.markdown.rdtmd" } },
+      "patterns": [{ "include": "source.perl" }]
+    },
+    "fence-markdown": {
+      "begin": "^\\s{0,3}(`{3,})\\s*(markdown|md)\\b.*$",
+      "end": "^\\s{0,3}\\1`*\\s*$",
+      "name": "markup.fenced_code.block.rdtmd",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.markdown.rdtmd" },
+        "2": { "name": "fenced_code.block.language.rdtmd" }
+      },
+      "endCaptures": { "0": { "name": "punctuation.definition.markdown.rdtmd" } },
+      "patterns": [{ "include": "text.html.markdown" }]
+    },
+    "fence-nginx": {
+      "begin": "^\\s{0,3}(`{3,})\\s*(nginx)\\b.*$",
+      "end": "^\\s{0,3}\\1`*\\s*$",
+      "name": "markup.fenced_code.block.rdtmd",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.markdown.rdtmd" },
+        "2": { "name": "fenced_code.block.language.rdtmd" }
+      },
+      "endCaptures": { "0": { "name": "punctuation.definition.markdown.rdtmd" } },
+      "patterns": [{ "include": "source.nginx" }]
+    },
+    "fence-graphql": {
+      "begin": "^\\s{0,3}(`{3,})\\s*(graphql|gql)\\b.*$",
+      "end": "^\\s{0,3}\\1`*\\s*$",
+      "name": "markup.fenced_code.block.rdtmd",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.markdown.rdtmd" },
+        "2": { "name": "fenced_code.block.language.rdtmd" }
+      },
+      "endCaptures": { "0": { "name": "punctuation.definition.markdown.rdtmd" } },
+      "patterns": [{ "include": "source.graphql" }]
+    },
+    "fence-generic": {
+      "begin": "^\\s{0,3}(`{3,})\\s*([\\w+#.-]*)\\s*$",
+      "end": "^\\s{0,3}\\1`*\\s*$",
+      "name": "markup.fenced_code.block.rdtmd",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.markdown.rdtmd" },
+        "2": { "name": "fenced_code.block.language.rdtmd" }
+      },
+      "endCaptures": { "0": { "name": "punctuation.definition.markdown.rdtmd" } }
+    },
+    "mathblock": {
+      "begin": "^\\s{0,3}(\\$\\$)\\s*$",
+      "end": "^\\s{0,3}(\\$\\$)\\s*$",
+      "name": "markup.math.block.rdtmd",
+      "beginCaptures": { "1": { "name": "punctuation.definition.math.rdtmd" } },
+      "endCaptures": { "1": { "name": "punctuation.definition.math.rdtmd" } }
+    },
+    "chart": {
+      "begin": "^(:::)(chart)\\b(.*)$",
+      "end": "^(:::)\\s*$",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.directive.rdtmd" },
+        "2": { "name": "keyword.control.directive.rdtmd" },
+        "3": { "name": "string.quoted.rdtmd" }
+      },
+      "endCaptures": { "1": { "name": "punctuation.definition.directive.rdtmd" } },
+      "patterns": [
+        { "match": "^\\s*//.*$", "name": "comment.line.rdtmd" },
+        {
+          "match": "^\\s*(@\\w+)\\s*(.*)$",
+          "captures": {
+            "1": { "name": "keyword.other.option.rdtmd" },
+            "2": { "name": "string.unquoted.rdtmd" }
+          }
+        },
+        {
+          "match": "^\\s*([^:\\n]+?)\\s*(:)\\s*(.*)$",
+          "captures": {
+            "1": { "name": "entity.name.tag.rdtmd" },
+            "2": { "name": "punctuation.separator.key-value.rdtmd" },
+            "3": { "patterns": [{ "match": "-?\\d+(?:\\.\\d+)?", "name": "constant.numeric.rdtmd" }] }
+          }
+        }
+      ]
+    },
+    "diagram": {
+      "begin": "^(:::)(diagram)\\s+(\\w+)(?:\\s+(\"[^\"]*\"))?\\s*$",
+      "end": "^(:::)\\s*$",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.directive.rdtmd" },
+        "2": { "name": "keyword.control.directive.rdtmd" },
+        "3": { "name": "entity.name.type.diagram.rdtmd" },
+        "4": { "name": "string.quoted.double.rdtmd" }
+      },
+      "endCaptures": { "1": { "name": "punctuation.definition.directive.rdtmd" } },
+      "patterns": [
+        { "match": "^\\s*//.*$", "name": "comment.line.rdtmd" },
+        {
+          "match": "^\\s*(@\\w+)\\s*(.*)$",
+          "captures": {
+            "1": { "name": "keyword.other.option.rdtmd" },
+            "2": { "name": "string.unquoted.rdtmd" }
+          }
+        },
+        {
+          "match": "(-->|->)",
+          "name": "keyword.operator.arrow.rdtmd"
+        },
+        {
+          "match": "(:)",
+          "name": "punctuation.separator.key-value.rdtmd"
+        },
+        {
+          "match": "\\|",
+          "name": "punctuation.separator.delimiter.rdtmd"
+        }
+      ]
+    },
+    "tabs": {
+      "begin": "^(:{3,})(tabs)\\b(.*)$",
+      "end": "^(:{3,})\\s*$",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.directive.rdtmd" },
+        "2": { "name": "keyword.control.directive.rdtmd" },
+        "3": { "name": "string.quoted.rdtmd" }
+      },
+      "endCaptures": { "1": { "name": "punctuation.definition.directive.rdtmd" } },
+      "patterns": [
+        {
+          "match": "^\\s*(===)\\s*(.+)$",
+          "captures": {
+            "1": { "name": "keyword.control.tab.rdtmd" },
+            "2": { "name": "entity.name.section.tab.rdtmd" }
+          }
+        },
+        { "include": "#fence" },
+        { "include": "#mathblock" },
+        { "include": "#chart" },
+        { "include": "#diagram" },
+        { "include": "#metrics" },
+        { "include": "#chat" },
+        { "include": "#details" },
+        { "include": "#directive" },
+        { "include": "#quote" },
+        { "include": "#list" },
+        { "include": "#inline" }
+      ]
+    },
+    "metrics": {
+      "begin": "^(:{3,})(metrics|kpi)\\b(?:\\s*(\"[^\"]*\"))?\\s*$",
+      "end": "^(:{3,})\\s*$",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.directive.rdtmd" },
+        "2": { "name": "keyword.control.directive.rdtmd" },
+        "3": { "name": "string.quoted.double.rdtmd" }
+      },
+      "endCaptures": { "1": { "name": "punctuation.definition.directive.rdtmd" } },
+      "patterns": [
+        { "match": "^\\s*//.*$", "name": "comment.line.rdtmd" },
+        {
+          "match": "^\\s*([^:\\n]+?)\\s*(:)\\s*([^(]+?)(?:\\s*\\(([^)]+)\\))?\\s*$",
+          "captures": {
+            "1": { "name": "entity.name.tag.rdtmd" },
+            "2": { "name": "punctuation.separator.key-value.rdtmd" },
+            "3": { "name": "constant.numeric.metric.rdtmd" },
+            "4": { "name": "string.quoted.other.diff.rdtmd" }
+          }
+        }
+      ]
+    },
+    "chat": {
+      "begin": "^(:{3,})(chat|dialog)\\b(?:\\s*(\"[^\"]*\"))?\\s*$",
+      "end": "^(:{3,})\\s*$",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.directive.rdtmd" },
+        "2": { "name": "keyword.control.directive.rdtmd" },
+        "3": { "name": "string.quoted.double.rdtmd" }
+      },
+      "endCaptures": { "1": { "name": "punctuation.definition.directive.rdtmd" } },
+      "patterns": [
+        { "match": "^\\s*//.*$", "name": "comment.line.rdtmd" },
+        {
+          "match": "^\\s*([A-Za-zÀ-ÿ0-9_.-]+)\\s*(:)\\s*(.*)$",
+          "captures": {
+            "1": { "name": "entity.name.function.sender.rdtmd" },
+            "2": { "name": "punctuation.separator.key-value.rdtmd" },
+            "3": { "patterns": [{ "include": "#inline" }] }
+          }
+        }
+      ]
+    },
+    "details": {
+      "begin": "^(:{3,})(details|accordion)\\b(?:\\s*(\"[^\"]*\"))?(?:\\s*(@open))?\\s*$",
+      "end": "^(:{3,})\\s*$",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.directive.rdtmd" },
+        "2": { "name": "keyword.control.directive.rdtmd" },
+        "3": { "name": "string.quoted.double.rdtmd" },
+        "4": { "name": "keyword.other.option.rdtmd" }
+      },
+      "endCaptures": { "1": { "name": "punctuation.definition.directive.rdtmd" } },
+      "patterns": [
+        { "include": "#fence" },
+        { "include": "#mathblock" },
+        { "include": "#chart" },
+        { "include": "#diagram" },
+        { "include": "#tabs" },
+        { "include": "#metrics" },
+        { "include": "#chat" },
+        { "include": "#directive" },
+        { "include": "#quote" },
+        { "include": "#list" },
+        { "include": "#inline" }
+      ]
+    },
+    "directive": {
+      "match": "^(:{3,})([A-Za-z]*)(.*)$",
+      "captures": {
+        "1": { "name": "punctuation.definition.directive.rdtmd" },
+        "2": { "name": "keyword.control.directive.rdtmd" },
+        "3": { "name": "entity.name.section.rdtmd" }
+      }
+    },
+    "include": {
+      "match": "^(@include)\\s+(.+)$",
+      "captures": {
+        "1": { "name": "keyword.control.import.rdtmd" },
+        "2": { "name": "string.unquoted.path.rdtmd" }
+      }
+    },
+    "heading": {
+      "match": "^\\s{0,3}(#{1,6})\\s+(.+?)(?:\\s+#+)?\\s*$",
+      "name": "markup.heading.rdtmd",
+      "captures": {
+        "1": { "name": "punctuation.definition.heading.rdtmd" },
+        "2": { "name": "entity.name.section.rdtmd", "patterns": [{ "include": "#inline" }] }
+      }
+    },
+    "hr": {
+      "match": "^\\s{0,3}([-*_])(?:\\s*\\1){2,}\\s*$",
+      "name": "meta.separator.rdtmd"
+    },
+    "tablesep": {
+      "match": "^(?=.*\\|)(?=.*-)[\\s|:-]+$",
+      "name": "punctuation.definition.table-separator.rdtmd"
+    },
+    "quote": {
+      "match": "^\\s{0,3}(>+)\\s?",
+      "captures": { "1": { "name": "punctuation.definition.quote.begin.rdtmd" } }
+    },
+    "list": {
+      "match": "^\\s*([-*+]|\\d{1,9}[.)])\\s+(\\[[ xX]\\]\\s+)?",
+      "captures": {
+        "1": { "name": "punctuation.definition.list.begin.rdtmd" },
+        "2": { "name": "constant.language.task.rdtmd" }
+      }
+    },
+    "inline": {
+      "patterns": [
+        { "match": "\\\\[\\\\`*_{}\\[\\]()#+\\-.!|~$>:@]", "name": "constant.character.escape.rdtmd" },
+        { "match": "(`+)(.+?)\\1", "name": "markup.inline.raw.string.rdtmd" },
+        { "match": "\\$\\$[^$\\n]+\\$\\$|\\$(?![\\s$])[^$\\n]*?(?<![\\s\\\\])\\$(?!\\d)", "name": "markup.math.inline.rdtmd" },
+        {
+          "match": "(!\\[)([^\\]]*)(\\])(\\()([^)\\s]*)(?:\\s+\"[^\"]*\")?(\\))",
+          "name": "meta.image.inline.rdtmd",
+          "captures": {
+            "2": { "name": "string.other.link.description.rdtmd" },
+            "5": { "name": "markup.underline.link.image.rdtmd" }
+          }
+        },
+        {
+          "match": "(\\[)([^\\]]*)(\\])(\\()([^)\\s]*)(?:\\s+\"[^\"]*\")?(\\))",
+          "name": "meta.link.inline.rdtmd",
+          "captures": {
+            "2": { "name": "string.other.link.title.rdtmd" },
+            "5": { "name": "markup.underline.link.rdtmd" }
+          }
+        },
+        { "match": "\\bhttps?://[^\\s<>]+", "name": "markup.underline.link.rdtmd" },
+        {
+          "match": "(\\*\\*)(?=\\S)(.+?)(?<=\\S)(\\*\\*)",
+          "name": "markup.bold.rdtmd",
+          "captures": { "2": { "patterns": [{ "include": "#inline" }] } }
+        },
+        {
+          "match": "(~~)(?=\\S)(.+?)(?<=\\S)(~~)",
+          "name": "markup.strikethrough.rdtmd",
+          "captures": { "2": { "patterns": [{ "include": "#inline" }] } }
+        },
+        {
+          "match": "(?<![*\\w\\\\])(\\*)(?=\\S)([^*]+?)(?<=\\S)(\\*)(?!\\*)",
+          "name": "markup.italic.rdtmd",
+          "captures": { "2": { "patterns": [{ "include": "#inline" }] } }
+        },
+        {
+          "match": "(?<![_\\w\\\\])(_)(?=\\S)([^_]+?)(?<=\\S)(_)(?![_\\w])",
+          "name": "markup.italic.rdtmd",
+          "captures": { "2": { "patterns": [{ "include": "#inline" }] } }
+        }
+      ]
+    }
+  }
+}

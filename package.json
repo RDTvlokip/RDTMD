@@ -1,0 +1,58 @@
+{
+  "name": "rdtmd",
+  "displayName": "RDTMD",
+  "description": "RDTMD technical markup language (.rdtmd): zero-dependency parser from scratch, live preview, native math, charts, and diagrams.",
+  "version": "1.0.1",
+  "publisher": "rdtvlokip",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rdtvlokip/rdtmd"
+  },
+  "license": "MIT",
+  "engines": { "vscode": "^1.80.0" },
+  "categories": ["Programming Languages"],
+  "main": "./src/extension.js",
+  "activationEvents": [],
+  "scripts": { "test": "node test.js" },
+  "contributes": {
+    "languages": [
+      {
+        "id": "rdtmd",
+        "aliases": ["RDTMD"],
+        "extensions": [".rdtmd"],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "rdtmd",
+        "scopeName": "source.rdtmd",
+        "path": "./syntaxes/rdtmd.tmLanguage.json"
+      }
+    ],
+    "configuration": {
+      "title": "RDTMD",
+      "properties": {
+        "rdtmd.preserveLineBreaks": {
+          "type": "boolean",
+          "default": true,
+          "description": "Preserve source line breaks in paragraphs and blockquotes within the preview. When disabled, consecutive lines are collapsed."
+        },
+        "rdtmd.inlineIncludes": {
+          "type": "boolean",
+          "default": false,
+          "description": "Embed the content of @include files directly into the preview. When disabled, displays a clickable navigation chip to open the target file."
+        }
+      }
+    },
+    "commands": [
+      { "command": "rdtmd.preview", "title": "RDTMD: Open Preview", "icon": "$(open-preview)" },
+      { "command": "rdtmd.showAst", "title": "RDTMD: Show AST (JSON)" }
+    ],
+    "menus": {
+      "editor/title": [
+        { "command": "rdtmd.preview", "when": "resourceLangId == rdtmd", "group": "navigation" }
+      ]
+    }
+  }
+}

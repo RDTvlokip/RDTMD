@@ -1,0 +1,191 @@
+# RDTMD : démo
+
+Un **noyau** from scratch, sans HTML. Du *italique*, du ~~barré~~, du `code`, une formule $E = mc^2$ et un lien [Zenodo](https://zenodo.org).
+
+---
+
+## Listes
+
+- Tableaux natifs
+- Maths
+  - inline avec `$...$`
+  - bloc avec `$$`
+- [x] Graphiques
+- [x] Diagrammes natifs
+- [ ] Export
+
+1. Premier
+2. Deuxième
+
+> Une citation
+> sur deux lignes
+
+## Tableau
+
+| Outil    | Graphiques | Dialecte |
+|:---------|:----------:|---------:|
+| Markdown | non        | oui      |
+| RDTMD    | oui        | non      |
+
+## Maths
+
+$$
+\sum_{i=1}^{n} i = \frac{n(n+1)}{2}
+$$
+
+$$
+\int_0^{\infty} e^{-x^2}\,dx = \frac{\sqrt{\pi}}{2}
+$$
+
+$$
+P(A \mid B) = \frac{P(B \mid A) P(A)}{P(B)}, \quad x \to \infty, \quad x \tos y, \quad W^\top x + b
+$$
+
+$$
+\softmax(z)_i = \frac{e^{z_i}}{\sum_{j} e^{z_j}}, \quad \mathcal{L}_{\text{MSE}} = \frac{1}{N} \sum_{i=1}^N (y_i - \hat{y}_i)^2
+$$
+
+$$
+A = \begin{pmatrix} 1 & 2 \\ 3 & 4 \end{pmatrix}, \quad f(x) = \begin{cases} x & x > 0 \\ 0 & \text{sinon} \end{cases}
+$$
+
+## Graphiques
+
+:::chart bar "Ventes par mois"
+@unit €
+x: Jan, Fév, Mar, Avr, Mai, Juin, Juil, Août, Sept, Oct, Nov, Déc
+2025: 12, 18, 9, 22, 16, 25, 20, 14, 28, 30, 35, 42
+2026: 15, 21, 14, 30, 22, 32, 28, 19, 34, 38, 45, 50
+:::
+
+:::chart line "Performances d'inférence"
+@unit tokens/s
+x: Mistral-7B, LLaMA-3-8B, Gemma-2-9B, Qwen-2.5-7B
+FP16: 42, 38, 35, 40
+INT4: 110, 98, 92, 105
+:::
+
+:::chart pie "Répartition du code"
+Python: 60
+Rust: 25
+JS: 15
+:::
+
+## Diagrammes natifs (SVG)
+
+:::diagram flow "Architecture IA"
+Input -> Tokenizer
+Tokenizer -> Embedding
+Embedding -> Transformer
+Transformer -> LMHead
+LMHead -> Output
+:::
+
+:::diagram sequence "Requête API"
+Client -> Serveur : GET /data
+Serveur -> DB : SELECT
+DB --> Serveur : lignes
+Serveur --> Client : 200 OK
+:::
+
+:::diagram mindmap "RDTMD"
+RDTMD
+  Syntaxe
+    Titres
+    Listes
+  Rendu
+    Maths
+    Graphiques
+  Extension VS Code
+:::
+
+:::diagram timeline "Mes projets"
+2024: AG-BPE publié | Premier crawler
+2025: RDTvlokip Search
+2026: RDTMD
+:::
+
+:::note Astuce
+Un bloc `:::note` contient d'autres blocs, listes comprises.
+:::
+
+## Code
+
+```python title="train.py" lines hl="3,4"
+def entrainer(modele, donnees, epochs=10):
+    """Entraîne un modèle PyTorch."""
+    for epoch in range(epochs):
+        perte = modele.loss(donnees)
+        print(f"Epoch {epoch+1}: perte={perte:.4f}")
+    return modele
+```
+
+```rust
+fn main() {
+    let message: &str = "Bonjour RDTMD !";
+    println!("{}", message);
+}
+```
+
+```javascript
+async function chargerDonnees(url) {
+    const reponse = await fetch(url);
+    const json = await reponse.json();
+    console.log(`Chargé: ${json.length} éléments`);
+    return json;
+}
+```
+
+```diff
+@@ -1,4 +1,5 @@
+-const version = "0.5.1";
++const version = "0.6.0";
++// Ajout des diagrammes natifs
+```
+
+## Nouvelles extensions natives
+
+:::metrics "Indicateurs du modèle"
+Perte validation: 0.24 (-12%, good)
+Latence: 42 ms (+5 ms, bad)
+Précision: 98.2% (+1.4%)
+Paramètres: 7B (+1B, neutral)
+:::
+
+:::tabs
+=== Python
+```python
+def predict(x):
+    return model(x)
+```
+=== JavaScript
+```javascript
+function predict(x) {
+    return model.forward(x);
+}
+```
+=== Rust
+```rust
+fn predict(x: &Tensor) -> Tensor {
+    model.forward(x)
+}
+```
+:::
+
+:::chat "Discussion ML"
+user: Comment réduire la latence sans perte d'exactitude ?
+ia: Tu peux appliquer la quantification INT8 ou utiliser du speculative decoding !
+system: Session terminée
+:::
+
+:::details "Détails de configuration" @open
+Voici les hyperparamètres utilisés pour la reproductibilité :
+- Optimiseur : AdamW ($\beta_1=0.9, \beta_2=0.999$)
+- Learning rate : $3 \times 10^{-4}$ avec cosine decay
+- Batch size : 64
+:::
+
+## Include
+
+@include inclus.rdtmd
+
