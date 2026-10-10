@@ -2,6 +2,14 @@
 
 All notable changes to the **RDTMD** project are documented in this file.
 
+## [1.0.2] - 2026-10-10
+
+### Fixed
+- **GitHub Hosted Documentation Assets**: Configured all 14 showcase images to load directly from the official GitHub raw repository CDN (`https://raw.githubusercontent.com/RDTvlokip/RDTMD/main/media/images/...`), complying with Microsoft Visual Studio Marketplace asset policies.
+- **Repository URL Matching**: Updated package repository metadata to match exact GitHub repository casing (`RDTvlokip/RDTMD`).
+
+---
+
 ## [1.0.1] - 2026-10-10
 
 ### Fixed
