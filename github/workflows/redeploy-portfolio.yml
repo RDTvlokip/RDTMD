@@ -1,0 +1,15 @@
+name: Redéployer le portfolio
+on:
+  release:
+    types: [published]
+  push:
+    tags: ['v*']
+    branches: [main]
+    paths: ['media/images/**']
+jobs:
+  redeploy:
+    runs-on: ubuntu-latest
+    steps:
+      - run: curl -fsS -X POST "$HOOK"
+        env:
+          HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK }}
