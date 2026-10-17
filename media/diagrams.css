@@ -137,5 +137,7 @@ body[data-rdt-theme="contrast"] {
   .tabs-nav { display: none !important; }
   details > * { display: block; }
   a { color: inherit; text-decoration: underline; }
-  .diagram-svg, .chart-svg { max-width: 100% !important; min-width: 0 !important; }
+  figure.diagram, figure.chart { overflow: visible !important; break-inside: avoid; }
+  figure figcaption { break-after: avoid; }
+  .diagram-svg, .chart-svg { width: auto !important; max-width: 100% !important; min-width: 0 !important; height: auto; max-height: 240mm; }
 }
