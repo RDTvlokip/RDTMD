@@ -476,6 +476,16 @@
     const y = window.scrollY;
     root.replaceChildren(...els);
     window.scrollTo(0, y);
+    /* figures symétriques plus larges que la page (arbres verticaux, mindmaps) : défilement horizontal initial au centre */
+    requestAnimationFrame(() => {
+      root.querySelectorAll('figure.diagram').forEach((f) => {
+        if (f.__centered) return;
+        const sv = f.querySelector('svg[data-center]');
+        if (!sv) return;
+        f.__centered = true;
+        if (f.scrollWidth > f.clientWidth + 2) f.scrollLeft = (f.scrollWidth - f.clientWidth) / 2;
+      });
+    });
   }
 
   /* ---------- liens internes (#ancre) ---------- */

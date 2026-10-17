@@ -86,6 +86,7 @@
       const vbW = Math.ceil(maxX - minX + pad * 2), vbH = Math.ceil(maxY - minY + pad * 2);
       const svg = s('svg', { viewBox: [Math.floor(minX - pad), Math.floor(minY - pad), vbW, vbH].join(' '), class: 'diagram-svg', role: 'img' });
       sizeSvg(svg, vbW, vbH, 0.7, 1.15, n);
+      svg.setAttribute('data-center', '1');
 
       edges.forEach((e) => {
         const dx = (e.x2 - e.x1) * 0.5;

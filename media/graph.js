@@ -112,14 +112,20 @@
     ids.forEach((u) => { sz[u] = cfg.size(u); });
     const hasGroups = groups.length > 0;
     const gap = [];
+    /* arêtes regroupées par rang de départ (évite de reparcourir toutes les arêtes pour chaque rang) */
+    const adjacent = Array.from({ length: maxRank }, () => []);
+    edges.forEach((e) => { if (!back.has(e) && rank[e.to] === rank[e.from] + 1) adjacent[rank[e.from]].push(e); });
     for (let r = 0; r < maxRank; r++) {
-      let need = 0, count = 0;
-      edges.forEach((e) => {
-        if (back.has(e) || rank[e.from] !== r || rank[e.to] !== r + 1) return;
-        if (e.label) { count++; need = Math.max(need, isLR ? lblW(e) + 38 : 0); }
+      let need = 0;
+      const fan = new Map();  // arêtes étiquetées sortant d'un même noeud : seules celles-ci s'empilent verticalement
+      let total = 0;
+      adjacent[r].forEach((e) => {
+        if (e.label) { total++; fan.set(e.from, (fan.get(e.from) || 0) + 1); need = Math.max(need, isLR ? lblW(e) + 38 : 0); }
         if (e.decor) need = Math.max(need, isLR ? 70 : 0);
       });
-      if (!isLR && count) need = count * (LBL_H + 8) + 28;
+      const maxFan = fan.size ? Math.max(...fan.values()) : 0;
+      /* supplément qui croît lentement avec le nombre total d'étiquettes (elles se partagent la largeur, pas la hauteur) */
+      if (!isLR && maxFan) need = maxFan * (LBL_H + 8) + 28 + Math.min(80, Math.round(7 * Math.sqrt(total)));
       gap.push(Math.max(isLR ? 56 : 48, need) + (hasGroups ? 22 : 0));
     }
 
@@ -309,7 +315,7 @@
     groupRects.forEach((r) => { grow(r.x, r.y); grow(r.x + r.w, r.y + r.h); });
     if (minX === Infinity) { minX = minY = 0; maxX = maxY = 40; }
 
-    return { pos, geo, groupRects, bounds: { minX, minY, maxX, maxY }, rank, back };
+    return { pos, geo, groupRects, bounds: { minX, minY, maxX, maxY }, rank, back, dir: isLR ? 'LR' : 'TD' };
   }
 
   /** Crée le svg cadré sur la géométrie et pose les marqueurs. */
@@ -319,6 +325,8 @@
     const totalW = Math.ceil(b.maxX - b.minX + PAD * 2), totalH = Math.ceil(b.maxY - b.minY + PAD * 2);
     const svg = s('svg', { viewBox: [Math.floor(b.minX - PAD), Math.floor(b.minY - PAD), totalW, totalH].join(' '), class: 'diagram-svg', role: 'img' });
     sizeSvg(svg, totalW, totalH, minScale, maxScale, n);
+    /* un arbre vertical est centré sur sa racine : si la figure déborde, on ouvre le défilement au milieu */
+    if (L.dir === 'TD') svg.setAttribute('data-center', '1');
     return svg;
   }
 
