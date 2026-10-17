@@ -2,6 +2,17 @@
 
 All notable changes to the **RDTMD** project are documented in this file.
 
+## [1.0.3] - 2026-10-17
+
+### Fixed
+- **Flow diagrams**: edge labels no longer hide arrows or get covered by nodes. Column spacing follows the width of the labels, labels are drawn on top and placed without collisions, and back edges route around the nodes (including in `@dir TD`).
+- **Timeline diagrams**: card text is wrapped and cards are sized from the measured text, so nothing overflows. Cards interleave without overlapping, fonts are larger and the diagram can scale up instead of shrinking.
+- **Sequence diagrams**: lifeline spacing adapts to the labels crossing it, labels have a background so lifelines do not strike through them, and self-message labels have room.
+- **Mindmap diagrams**: nodes deeper than two levels were silently dropped; layout is now recursive with no depth limit. Sides are balanced by leaf count and box widths are measured.
+- **Documentation**: refreshed the four diagram screenshots in the README with the new renderer, and updated the diagram descriptions and the install command.
+
+---
+
 ## [1.0.2] - 2026-10-10
 
 ### Fixed

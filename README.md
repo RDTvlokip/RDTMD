@@ -241,7 +241,7 @@ C++: 5
 RDTMD includes four built-in diagram generators with client-side layout algorithms.
 
 #### 1. Flowchart (`flow`)
-Computes topological levels using a longest-path algorithm, handles internal cycles gracefully without infinite recursion, orders siblings via predecessor barycenters to minimize edge crossings, and draws curved connecting vectors with directional arrows.
+Computes topological levels using a longest-path algorithm, handles internal cycles gracefully without infinite recursion, orders siblings via predecessor barycenters to minimize edge crossings, and draws curved connecting vectors with directional arrows. Node boxes are sized from the measured text, and the spacing between levels grows with the width of the edge labels, so a label never hides an arrow or a node. Labels are placed without collisions, and back edges (cycles) are routed around the nodes.
 
 ```rdtmd
 :::diagram flow "Inference Pipeline"
@@ -261,7 +261,7 @@ Sampler --> Output
 - Solid arrows: `->`. Dashed arrows: `-->`. Edge annotations: `: label`.
 
 #### 2. Sequence Diagram (`sequence`)
-Generates vertical actor lifelines, sequence activation steps, synchronous calls, dashed return messages, and self-referential loops.
+Generates vertical actor lifelines, sequence activation steps, synchronous calls, dashed return messages, and self-referential loops. The distance between two lifelines adapts to the labels that cross it, and each label has its own background so that a lifeline never strikes through the text.
 
 ```rdtmd
 :::diagram sequence "Authentication Flow"
@@ -277,7 +277,7 @@ Gateway --> Client : Set-Cookie
 ![Sequence Diagram](https://raw.githubusercontent.com/RDTvlokip/RDTMD/main/media/images/diagram_sequence.png)
 
 #### 3. Mindmap (`mindmap`)
-Parses indentation hierarchies (2 spaces per level) and generates a central-root tree structure. Child branches are distributed evenly across left and right sides with Bézier curves and distinct branch colors.
+Parses indentation hierarchies (2 spaces per level) and generates a central-root tree structure with no depth limit. Child branches are balanced across the left and right sides according to their number of leaves, with Bézier curves and distinct branch colors.
 
 ```rdtmd
 :::diagram mindmap "RDTMD Ecosystem"
@@ -297,7 +297,7 @@ RDTMD
 ![Mindmap Diagram](https://raw.githubusercontent.com/RDTvlokip/RDTMD/main/media/images/diagram_mindmap.png)
 
 #### 4. Timeline (`timeline`)
-Constructs horizontal chronological project roadmaps. Milestone cards alternate above and below the central temporal axis, supporting multiple concurrent milestones separated by ` | `.
+Constructs horizontal chronological project roadmaps. Milestone cards alternate above and below the central temporal axis, supporting multiple concurrent milestones separated by ` | `. Long texts are wrapped inside their card, and cards are sized from the measured text so that nothing overflows or overlaps.
 
 ```rdtmd
 :::diagram timeline "Project Roadmap"
@@ -517,7 +517,7 @@ The RDTMD core exports two primary methods:
 Run the following command in your terminal:
 
 ```bash
-code --install-extension dist/rdtmd-1.0.2.vsix --force
+code --install-extension dist/rdtmd-1.0.3.vsix --force
 ```
 
 Or search for **RDTMD** directly in the Visual Studio Code Extensions view (`Ctrl+Shift+X`).

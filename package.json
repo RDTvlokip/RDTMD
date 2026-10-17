@@ -2,7 +2,7 @@
   "name": "rdtmd",
   "displayName": "RDTMD",
   "description": "RDTMD technical markup language (.rdtmd): zero-dependency parser from scratch, live preview, native math, charts, and diagrams.",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "publisher": "rdtvlokip",
   "repository": {
     "type": "git",

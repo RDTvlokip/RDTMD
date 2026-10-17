@@ -473,6 +473,51 @@
     return fig;
   }
 
+  /* ---------- mesure et découpe du texte (le SVG ne revient pas à la ligne tout seul) ---------- */
+
+  const measureCtx = (() => {
+    try { return document.createElement('canvas').getContext('2d'); } catch (e) { return null; }
+  })();
+  let fontFamily = null;
+
+  function textW(str, px, weight) {
+    if (measureCtx) {
+      if (fontFamily === null) fontFamily = getComputedStyle(document.body).fontFamily || 'sans-serif';
+      measureCtx.font = (weight || 400) + ' ' + px + 'px ' + fontFamily;
+      return measureCtx.measureText(str).width;
+    }
+    return String(str).length * px * 0.6;
+  }
+
+  function wrapText(str, maxW, px, weight) {
+    const lines = [];
+    let cur = '';
+    for (const w of String(str).split(/\s+/).filter(Boolean)) {
+      const t = cur ? cur + ' ' + w : w;
+      if (cur && textW(t, px, weight) > maxW) { lines.push(cur); cur = w; } else cur = t;
+    }
+    if (cur) lines.push(cur);
+    return lines.length ? lines : [''];
+  }
+
+  function sizeSvg(svg, w, hgt, minScale, maxScale) {
+    svg.setAttribute('width', w);
+    svg.setAttribute('height', hgt);
+    svg.style.width = '100%';
+    svg.style.maxWidth = Math.round(w * maxScale) + 'px';
+    svg.style.minWidth = Math.round(w * minScale) + 'px';
+  }
+
+  function bez(p, t) {
+    const u = 1 - t;
+    const a = u * u * u, b = 3 * u * u * t, c = 3 * u * t * t, d = t * t * t;
+    return [a * p[0][0] + b * p[1][0] + c * p[2][0] + d * p[3][0], a * p[0][1] + b * p[1][1] + c * p[2][1] + d * p[3][1]];
+  }
+
+  function rectsHit(a, b, m) {
+    return a.x < b.x + b.w + m && a.x + a.w + m > b.x && a.y < b.y + b.h + m && a.y + a.h + m > b.y;
+  }
+
   function renderFlow(n) {
     if (!n.nodes || !n.nodes.length) return null;
     const dir = (n.dir || 'LR').toUpperCase();
@@ -503,6 +548,7 @@
       let ch = false;
       for (const e of n.edges) {
         if (backEdges.has(e)) continue;
+        if (rank[e.to] === undefined || rank[e.from] === undefined) continue;
         if (rank[e.to] < rank[e.from] + 1) {
           rank[e.to] = rank[e.from] + 1;
           ch = true;
@@ -530,163 +576,206 @@
       ranks[r].sort((a, b) => (score.get(a) || 0) - (score.get(b) || 0));
     }
 
-    const nodeW = {}, nodeH = {};
-    const boxH = 38;
+    /* Dimensions des noeuds : largeur mesurée, retour à la ligne au-delà de 230 px */
+    const NODE_PX = 13, LINE_H = 16, LBL_PX = 11.5;
+    const nodeW = {}, nodeH = {}, nodeLines = {};
     n.nodes.forEach((u) => {
-      nodeW[u] = Math.max(80, Math.min(220, Math.round(u.length * 8.5 + 24)));
-      nodeH[u] = boxH;
+      const lines = wrapText(u, 230, NODE_PX);
+      nodeLines[u] = lines;
+      nodeW[u] = Math.max(84, Math.ceil(Math.max(...lines.map((l) => textW(l, NODE_PX))) + 36));
+      nodeH[u] = Math.max(38, lines.length * LINE_H + 22);
     });
 
-    const nodeX = {}, nodeY = {};
-    const pad = 24;
-    let totalW = 0, totalH = 0;
+    const edges = n.edges.filter((e) => nodeW[e.from] !== undefined && nodeW[e.to] !== undefined);
+    const lblW = (e) => Math.ceil(textW(e.label, LBL_PX)) + 16;
+    const LBL_H = 20;
 
-    if (isLR) {
-      const colGap = 50, rowGap = 20;
-      const rankW = ranks.map((list) => Math.max(...list.map((u) => nodeW[u])));
-      const colX = [];
-      let curX = pad;
-      rankW.forEach((w) => {
-        colX.push(curX);
-        curX += w + colGap;
+    /* L'espace entre deux rangs s'adapte à la plus large étiquette qui le traverse */
+    const gap = [];
+    for (let r = 0; r < maxRank; r++) {
+      let need = 0, count = 0;
+      edges.forEach((e) => {
+        if (backEdges.has(e) || !e.label) return;
+        if (rank[e.from] === r && rank[e.to] === r + 1) {
+          count++;
+          need = Math.max(need, isLR ? lblW(e) + 38 : 0);
+        }
       });
-      totalW = curX - colGap + pad;
+      /* en TD, chaque étiquette de la zone a besoin de sa propre hauteur */
+      if (!isLR && count) need = count * (LBL_H + 8) + 28;
+      gap.push(Math.max(isLR ? 54 : 46, need));
+    }
 
-      const maxColH = Math.max(...ranks.map((list) => list.length * boxH + (list.length - 1) * rowGap));
-      totalH = Math.max(boxH + pad * 2, maxColH + pad * 2);
-
+    const nodeX = {}, nodeY = {};
+    if (isLR) {
+      const rowGap = 22;
+      const rankW = ranks.map((list) => Math.max(...list.map((u) => nodeW[u])));
+      let curX = 0;
       ranks.forEach((list, r) => {
-        const hTotal = list.length * boxH + (list.length - 1) * rowGap;
-        let startY = (totalH - hTotal) / 2;
+        const hTotal = list.reduce((a, u) => a + nodeH[u], 0) + (list.length - 1) * rowGap;
+        let y = -hTotal / 2;
         list.forEach((u) => {
-          nodeX[u] = colX[r] + (rankW[r] - nodeW[u]) / 2;
-          nodeY[u] = startY;
-          startY += boxH + rowGap;
+          nodeX[u] = curX + (rankW[r] - nodeW[u]) / 2;
+          nodeY[u] = y;
+          y += nodeH[u] + rowGap;
         });
+        curX += rankW[r] + (gap[r] || 0);
       });
     } else {
-      const rowGap = 45, colGap = 24;
-      const rankH = ranks.map(() => boxH);
-      const rowY = [];
-      let curY = pad;
-      rankH.forEach((h) => {
-        rowY.push(curY);
-        curY += h + rowGap;
-      });
-      totalH = curY - rowGap + pad;
-
-      const maxRowW = Math.max(...ranks.map((list) => list.reduce((acc, u) => acc + nodeW[u], 0) + (list.length - 1) * colGap));
-      totalW = Math.max(160, maxRowW + pad * 2);
-
+      const colGap = 40;
+      let curY = 0;
       ranks.forEach((list, r) => {
-        const wTotal = list.reduce((acc, u) => acc + nodeW[u], 0) + (list.length - 1) * colGap;
-        let startX = (totalW - wTotal) / 2;
+        const wTotal = list.reduce((a, u) => a + nodeW[u], 0) + (list.length - 1) * colGap;
+        const rowH = Math.max(...list.map((u) => nodeH[u]));
+        let x = -wTotal / 2;
         list.forEach((u) => {
-          nodeX[u] = startX;
-          nodeY[u] = rowY[r];
-          startX += nodeW[u] + colGap;
+          nodeX[u] = x;
+          nodeY[u] = curY + (rowH - nodeH[u]) / 2;
+          x += nodeW[u] + colGap;
         });
+        curY += rowH + (gap[r] || 0);
       });
     }
 
-    const svg = s('svg', { viewBox: '0 0 ' + totalW + ' ' + totalH, class: 'diagram-svg', role: 'img', width: totalW, height: totalH });
-    svg.style.maxWidth = totalW + 'px';
-    svg.style.width = '100%';
-    addArrowDefs(svg);
+    const nodeRect = (u) => ({ x: nodeX[u], y: nodeY[u], w: nodeW[u], h: nodeH[u] });
+    const nodeRects = n.nodes.map(nodeRect);
 
-    n.edges.forEach((e) => {
+    /* ---------- géométrie des arêtes ---------- */
+    const rankRange = (a, b) => {
+      const lo = Math.min(rank[a], rank[b]), hi = Math.max(rank[a], rank[b]);
+      return n.nodes.filter((u) => rank[u] >= lo && rank[u] <= hi);
+    };
+    const used = { top: 0, left: 0, right: 0 };
+    const geo = edges.map((e) => {
       const from = e.from, to = e.to;
-      if (nodeX[from] === undefined || nodeX[to] === undefined) return;
-      let x1, y1, x2, y2, d, midX, midY;
-      const isBack = backEdges.has(e) || (isLR ? nodeX[to] <= nodeX[from] : nodeY[to] <= nodeY[from]);
+      const g = { e, fixed: null, back: backEdges.has(e) };
+      if (!g.back) {
+        let p;
+        if (isLR) {
+          const x1 = nodeX[from] + nodeW[from], y1 = nodeY[from] + nodeH[from] / 2;
+          const x2 = nodeX[to], y2 = nodeY[to] + nodeH[to] / 2;
+          const dx = Math.max(25, (x2 - x1) * 0.5);
+          p = [[x1, y1], [x1 + dx, y1], [x2 - dx, y2], [x2, y2]];
+        } else {
+          const x1 = nodeX[from] + nodeW[from] / 2, y1 = nodeY[from] + nodeH[from];
+          const x2 = nodeX[to] + nodeW[to] / 2, y2 = nodeY[to];
+          const dy = Math.max(20, (y2 - y1) * 0.5);
+          p = [[x1, y1], [x1, y1 + dy], [x2, y2 - dy], [x2, y2]];
+        }
+        g.p = p;
+        return g;
+      }
 
       if (isLR) {
-        if (!isBack) {
-          x1 = nodeX[from] + nodeW[from];
-          y1 = nodeY[from] + boxH / 2;
-          x2 = nodeX[to];
-          y2 = nodeY[to] + boxH / 2;
-          const dx = Math.max(25, (x2 - x1) * 0.5);
-          d = 'M ' + x1 + ' ' + y1 + ' C ' + (x1 + dx) + ' ' + y1 + ', ' + (x2 - dx) + ' ' + y2 + ', ' + x2 + ' ' + y2;
-          midX = (x1 + x2) / 2;
-          midY = (y1 + y2) / 2;
-        } else {
-          x1 = nodeX[from] + nodeW[from] / 2;
-          y1 = nodeY[from];
-          x2 = nodeX[to] + nodeW[to] / 2;
-          y2 = nodeY[to];
-          const archY = Math.max(10, Math.min(y1, y2) - 30);
-          d = 'M ' + x1 + ' ' + y1 + ' C ' + x1 + ' ' + archY + ', ' + x2 + ' ' + archY + ', ' + x2 + ' ' + y2;
-          midX = (x1 + x2) / 2;
-          midY = archY;
-        }
-      } else {
-        if (!isBack) {
-          x1 = nodeX[from] + nodeW[from] / 2;
-          y1 = nodeY[from] + boxH;
-          x2 = nodeX[to] + nodeW[to] / 2;
-          y2 = nodeY[to];
-          const dy = Math.max(20, (y2 - y1) * 0.5);
-          d = 'M ' + x1 + ' ' + y1 + ' C ' + x1 + ' ' + (y1 + dy) + ', ' + x2 + ' ' + (y2 - dy) + ', ' + x2 + ' ' + y2;
-          midX = (x1 + x2) / 2;
-          midY = (y1 + y2) / 2;
-        } else {
-          x1 = nodeX[from] + nodeW[from];
-          y1 = nodeY[from] + boxH / 2;
-          x2 = nodeX[to] + nodeW[to];
-          y2 = nodeY[to] + boxH / 2;
-          const archX = Math.max(x1, x2) + 35;
-          d = 'M ' + x1 + ' ' + y1 + ' C ' + archX + ' ' + y1 + ', ' + archX + ' ' + y2 + ', ' + x2 + ' ' + y2;
-          midX = archX;
-          midY = (y1 + y2) / 2;
-        }
+        /* retour : arc au-dessus de tous les noeuds entre les deux rangs */
+        const self = from === to;
+        const x1 = nodeX[from] + nodeW[from] / 2 + (self ? 16 : 0), y1 = nodeY[from];
+        const x2 = nodeX[to] + nodeW[to] / 2 - (self ? 16 : 0), y2 = nodeY[to];
+        const top = Math.min(...rankRange(from, to).map((u) => nodeY[u]));
+        const apex = top - 30 - 24 * used.top++;
+        const c = (apex - (y1 + y2) / 8) / 0.75;
+        g.p = [[x1, y1], [x1, c], [x2, c], [x2, y2]];
+        g.apex = [(x1 + x2) / 2, apex];
+        return g;
       }
 
+      /* TD : retour par le côté libre (droite si possible, sinon gauche) */
+      const extreme = (u, side) => {
+        const list = ranks[rank[u]];
+        return side === 'R' ? list[list.length - 1] === u : list[0] === u;
+      };
+      const side = (extreme(from, 'R') && extreme(to, 'R')) || !(extreme(from, 'L') && extreme(to, 'L')) ? 'R' : 'L';
+      const span = rankRange(from, to);
+      const edgeX = side === 'R'
+        ? Math.max(...span.map((u) => nodeX[u] + nodeW[u]))
+        : Math.min(...span.map((u) => nodeX[u]));
+      const k = used[side === 'R' ? 'right' : 'left']++;
+      const wl = e.label ? lblW(e) : 0;
+      const archX = side === 'R' ? edgeX + 34 + (wl + 12) * k : edgeX - 34 - (wl + 12) * k;
+      const x1 = side === 'R' ? nodeX[from] + nodeW[from] : nodeX[from], y1 = nodeY[from] + nodeH[from] / 2;
+      const x2 = side === 'R' ? nodeX[to] + nodeW[to] : nodeX[to], y2 = nodeY[to] + nodeH[to] / 2;
+      const c = (archX - (x1 + x2) / 8) / 0.75;
+      g.p = [[x1, y1], [c, y1], [c, y2], [x2, y2]];
+      if (e.label) {
+        const w = lblW(e);
+        g.fixed = { x: side === 'R' ? archX + 8 : archX - 8 - w, y: (y1 + y2) / 2 - LBL_H / 2, w, h: LBL_H };
+      }
+      return g;
+    });
+
+    /* ---------- placement des étiquettes sans collision ---------- */
+    const placed = [];
+    geo.filter((g) => g.fixed).forEach((g) => { g.box = g.fixed; placed.push(g.box); });
+    const ts = isLR ? [0.5, 0.38, 0.62, 0.28, 0.72, 0.2, 0.8, 0.14, 0.86] : [0.5, 0.35, 0.65, 0.25, 0.75, 0.15, 0.85, 0.1, 0.9];
+    geo.filter((g) => g.e.label && !g.fixed).forEach((g) => {
+      const w = lblW(g.e);
+      let best = null;
+      for (const t of ts) {
+        const [x, y] = g.back && g.apex && t === 0.5 ? g.apex : bez(g.p, t);
+        /* en TD, une flèche oblique garde son tracé visible : l'étiquette se pose à côté */
+        const side = !isLR && !g.back ? Math.sign(g.p[3][0] - g.p[0][0]) * (Math.abs(g.p[3][0] - g.p[0][0]) > 20) : 0;
+        const bx = side > 0 ? x + 8 : side < 0 ? x - 8 - w : x - w / 2;
+        const box = { x: bx, y: y - LBL_H / 2, w, h: LBL_H };
+        const hit = nodeRects.some((r) => rectsHit(box, r, 2)) || placed.some((r) => rectsHit(box, r, 3));
+        if (!hit) { best = box; break; }
+        if (!best) best = box;
+      }
+      g.box = best;
+      placed.push(best);
+    });
+
+    /* ---------- cadrage sur la géométrie réelle ---------- */
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    const grow = (x, y) => { minX = Math.min(minX, x); minY = Math.min(minY, y); maxX = Math.max(maxX, x); maxY = Math.max(maxY, y); };
+    nodeRects.forEach((r) => { grow(r.x, r.y); grow(r.x + r.w, r.y + r.h); });
+    geo.forEach((g) => { for (let i = 0; i <= 20; i++) { const q = bez(g.p, i / 20); grow(q[0], q[1]); } });
+    geo.forEach((g) => { if (g.box) { grow(g.box.x, g.box.y); grow(g.box.x + g.box.w, g.box.y + g.box.h); } });
+    const PAD = 18;
+    const totalW = Math.ceil(maxX - minX + PAD * 2), totalH = Math.ceil(maxY - minY + PAD * 2);
+
+    const svg = s('svg', { viewBox: [minX - PAD, minY - PAD, totalW, totalH].join(' '), class: 'diagram-svg', role: 'img' });
+    sizeSvg(svg, totalW, totalH, 0.7, 1.15);
+    addArrowDefs(svg);
+
+    geo.forEach((g) => {
+      const p = g.p;
+      const d = 'M ' + p[0].join(' ') + ' C ' + p[1].join(' ') + ', ' + p[2].join(' ') + ', ' + p[3].join(' ');
       svg.append(s('path', {
         d,
-        class: 'diagram-edge' + (e.style === 'dashed' ? ' dashed' : ''),
+        class: 'diagram-edge' + (g.e.style === 'dashed' ? ' dashed' : ''),
         'marker-end': 'url(#rdt-arrow)',
       }));
-
-      if (e.label) {
-        const lw = Math.round(e.label.length * 6.5 + 12);
-        svg.append(s('rect', {
-          x: midX - lw / 2,
-          y: midY - 9,
-          width: lw,
-          height: 18,
-          rx: 3,
-          class: 'diagram-edge-bg',
-        }));
-        svg.append(s('text', {
-          x: midX,
-          y: midY + 4,
-          class: 'diagram-edge-label',
-          'text-anchor': 'middle',
-          text: e.label,
-        }));
-      }
     });
 
     n.nodes.forEach((u) => {
       const g = s('g', { class: 'diagram-node' });
-      g.append(s('rect', {
-        x: nodeX[u],
-        y: nodeY[u],
-        width: nodeW[u],
-        height: boxH,
-        rx: 6,
-        class: 'diagram-node-box',
-      }));
-      g.append(s('text', {
-        x: nodeX[u] + nodeW[u] / 2,
-        y: nodeY[u] + boxH / 2 + 4,
-        class: 'diagram-node-text',
-        'text-anchor': 'middle',
-        text: u,
-      }));
+      g.append(s('rect', { x: nodeX[u], y: nodeY[u], width: nodeW[u], height: nodeH[u], rx: 6, class: 'diagram-node-box' }));
+      const lines = nodeLines[u];
+      const y0 = nodeY[u] + nodeH[u] / 2 - ((lines.length - 1) * LINE_H) / 2 + 4.5;
+      lines.forEach((l, i) => {
+        g.append(s('text', {
+          x: nodeX[u] + nodeW[u] / 2,
+          y: y0 + i * LINE_H,
+          class: 'diagram-node-text',
+          'text-anchor': 'middle',
+          text: l,
+        }));
+      });
       g.append(s('title', { text: u }));
       svg.append(g);
+    });
+
+    /* Étiquettes en dernier : jamais recouvertes par un noeud */
+    geo.forEach((g) => {
+      if (!g.box) return;
+      svg.append(s('rect', { x: g.box.x, y: g.box.y, width: g.box.w, height: g.box.h, rx: 4, class: 'diagram-edge-bg' }));
+      svg.append(s('text', {
+        x: g.box.x + g.box.w / 2,
+        y: g.box.y + g.box.h / 2 + 4,
+        class: 'diagram-edge-label',
+        'text-anchor': 'middle',
+        text: g.e.label,
+      }));
     });
 
     return svg;
@@ -695,102 +784,90 @@
   function renderSequence(n) {
     if (!n.participants || !n.participants.length) return null;
     const parts = n.participants;
-    const msgs = n.messages || [];
+    const msgs = (n.messages || []).filter((m) => parts.includes(m.from) && parts.includes(m.to));
 
-    const maxLblLen = Math.max(...msgs.map((m) => (m.label || '').length), 4);
-    const colW = Math.max(140, Math.min(240, Math.round(maxLblLen * 7.5 + 40)));
-    const padX = 30;
-    const boxW = Math.min(130, colW - 20), boxH = 34;
-    const stepH = 46;
-    const totalW = padX * 2 + (parts.length - 1) * colW + boxW;
-    const topY = 20, firstMsgY = topY + boxH + 30;
-    const totalH = firstMsgY + msgs.length * stepH + 40;
+    const MSG_PX = 12.5, PART_PX = 13, LOOP_W = 34;
+    const boxH = 34, topY = 20, stepH = 50;
+    const idx = {};
+    parts.forEach((p, i) => { idx[p] = i; });
+    const boxW = parts.map((p) => Math.max(90, Math.ceil(textW(p, PART_PX, 600) + 28)));
 
-    const partX = {};
-    parts.forEach((p, i) => {
-      partX[p] = padX + boxW / 2 + i * colW;
+    /* Écart entre lifelines : assez pour le plus long libellé qui les traverse */
+    const gaps = parts.slice(1).map((_, i) => Math.max(120, (boxW[i] + boxW[i + 1]) / 2 + 24));
+    const lblW = (m) => (m.label ? Math.ceil(textW(m.label, MSG_PX)) + 24 : 0);
+    const spans = msgs
+      .filter((m) => m.from !== m.to)
+      .map((m) => ({ a: Math.min(idx[m.from], idx[m.to]), b: Math.max(idx[m.from], idx[m.to]), w: lblW(m) }))
+      .sort((p, q) => (p.b - p.a) - (q.b - q.a));
+    spans.forEach((sp) => {
+      let have = 0;
+      for (let i = sp.a; i < sp.b; i++) have += gaps[i];
+      if (have < sp.w) gaps[sp.b - 1] += sp.w - have;
     });
 
-    const svg = s('svg', { viewBox: '0 0 ' + totalW + ' ' + totalH, class: 'diagram-svg', role: 'img', width: totalW, height: totalH });
-    svg.style.maxWidth = totalW + 'px';
-    svg.style.width = '100%';
+    const partX = {};
+    let cur = boxW[0] / 2;
+    parts.forEach((p, i) => {
+      if (i) cur += gaps[i - 1];
+      partX[p] = cur;
+    });
+    /* libellé d'une boucle sur soi-même : place à droite de la lifeline */
+    const loopRoom = Math.max(0, ...msgs.filter((m) => m.from === m.to).map((m) => {
+      const room = LOOP_W + 8 + lblW(m);
+      const i = idx[m.from];
+      return i === parts.length - 1 ? room : room - gaps[i] + boxW[i + 1] / 2;
+    }));
+    const PAD = 24;
+    const totalW = Math.ceil(partX[parts[parts.length - 1]] + boxW[parts.length - 1] / 2 + loopRoom + PAD * 2);
+    const firstMsgY = topY + boxH + 34;
+    const totalH = firstMsgY + msgs.length * stepH + 24;
+
+    const svg = s('svg', { viewBox: [-PAD, 0, totalW, totalH].join(' '), class: 'diagram-svg', role: 'img' });
+    sizeSvg(svg, totalW, totalH, 0.75, 1.2);
     addArrowDefs(svg);
 
     parts.forEach((p) => {
-      const cx = partX[p];
-      svg.append(s('line', {
-        x1: cx,
-        y1: topY + boxH,
-        x2: cx,
-        y2: totalH - 20,
-        class: 'seq-lifeline',
-      }));
+      svg.append(s('line', { x1: partX[p], y1: topY + boxH, x2: partX[p], y2: totalH - 12, class: 'seq-lifeline' }));
     });
 
-    msgs.forEach((m, idx) => {
-      const y = firstMsgY + idx * stepH;
+    const labels = [];
+    msgs.forEach((m, k) => {
+      const y = firstMsgY + k * stepH;
       const x1 = partX[m.from], x2 = partX[m.to];
-      if (x1 === undefined || x2 === undefined) return;
+      const cls = 'diagram-edge' + (m.style === 'dashed' ? ' dashed' : '');
 
       if (x1 === x2) {
-        const loopW = 32, loopH = 22;
-        const d = 'M ' + x1 + ' ' + y + ' L ' + (x1 + loopW) + ' ' + y +
-          ' L ' + (x1 + loopW) + ' ' + (y + loopH) + ' L ' + (x1 + 4) + ' ' + (y + loopH);
-        svg.append(s('path', {
-          d,
-          class: 'diagram-edge' + (m.style === 'dashed' ? ' dashed' : ''),
-          'marker-end': 'url(#rdt-arrow)',
-        }));
-        if (m.label) {
-          svg.append(s('text', {
-            x: x1 + loopW + 6,
-            y: y + 14,
-            class: 'seq-msg-text',
-            'text-anchor': 'start',
-            text: m.label,
-          }));
-        }
+        const loopH = 24;
+        const d = 'M ' + x1 + ' ' + y + ' L ' + (x1 + LOOP_W) + ' ' + y +
+          ' L ' + (x1 + LOOP_W) + ' ' + (y + loopH) + ' L ' + (x1 + 3) + ' ' + (y + loopH);
+        svg.append(s('path', { d, class: cls, 'marker-end': 'url(#rdt-arrow)' }));
+        if (m.label) labels.push({ x: x1 + LOOP_W + 8, y: y + loopH / 2 + 4, anchor: 'start', text: m.label });
       } else {
-        const toRight = x2 > x1;
-        const targetX = toRight ? x2 - 2 : x2 + 2;
-        svg.append(s('line', {
-          x1,
-          y1: y,
-          x2: targetX,
-          y2: y,
-          class: 'diagram-edge' + (m.style === 'dashed' ? ' dashed' : ''),
-          'marker-end': 'url(#rdt-arrow)',
-        }));
-        if (m.label) {
-          svg.append(s('text', {
-            x: (x1 + x2) / 2,
-            y: y - 6,
-            class: 'seq-msg-text',
-            'text-anchor': 'middle',
-            text: m.label,
-          }));
-        }
+        const targetX = x2 > x1 ? x2 - 1 : x2 + 1;
+        svg.append(s('line', { x1, y1: y, x2: targetX, y2: y, class: cls, 'marker-end': 'url(#rdt-arrow)' }));
+        if (m.label) labels.push({ x: (x1 + x2) / 2, y: y - 8, anchor: 'middle', text: m.label });
       }
     });
 
-    parts.forEach((p) => {
+    /* Fond sous les libellés : une lifeline traversée ne raye plus le texte */
+    labels.forEach((l) => {
+      const w = Math.ceil(textW(l.text, MSG_PX)) + 10;
+      svg.append(s('rect', {
+        x: l.anchor === 'middle' ? l.x - w / 2 : l.x - 5,
+        y: l.y - 13,
+        width: w,
+        height: 18,
+        rx: 3,
+        class: 'diagram-edge-bg seq-lbl-bg',
+      }));
+      svg.append(s('text', { x: l.x, y: l.y, class: 'seq-msg-text', 'text-anchor': l.anchor, text: l.text }));
+    });
+
+    parts.forEach((p, i) => {
       const cx = partX[p];
       const g = s('g', { class: 'seq-part' });
-      g.append(s('rect', {
-        x: cx - boxW / 2,
-        y: topY,
-        width: boxW,
-        height: boxH,
-        rx: 5,
-        class: 'seq-part-box',
-      }));
-      g.append(s('text', {
-        x: cx,
-        y: topY + boxH / 2 + 4,
-        class: 'seq-part-text',
-        'text-anchor': 'middle',
-        text: p,
-      }));
+      g.append(s('rect', { x: cx - boxW[i] / 2, y: topY, width: boxW[i], height: boxH, rx: 5, class: 'seq-part-box' }));
+      g.append(s('text', { x: cx, y: topY + boxH / 2 + 4.5, class: 'seq-part-text', 'text-anchor': 'middle', text: p }));
       g.append(s('title', { text: p }));
       svg.append(g);
     });
@@ -803,81 +880,66 @@
     const root = n.root;
     const branches = root.children || [];
 
+    const leafCache = new Map();
     function countLeaves(node) {
-      if (!node.children || !node.children.length) return 1;
-      return node.children.reduce((acc, c) => acc + countLeaves(c), 0);
+      if (leafCache.has(node)) return leafCache.get(node);
+      const v = !node.children || !node.children.length ? 1 : node.children.reduce((acc, c) => acc + countLeaves(c), 0);
+      leafCache.set(node, v);
+      return v;
     }
 
-    const leafH = 36;
+    const LEAF_H = 38, NODE_PX = 12.5, ROOT_PX = 13.5;
     let rightB = [], leftB = [];
     if (branches.length <= 1) {
       rightB = branches.map((b, i) => ({ b, color: COLORS[i % COLORS.length] }));
     } else {
+      /* on équilibre les deux côtés selon le nombre de feuilles, pas selon la parité */
+      const sizes = [0, 0];
       branches.forEach((b, i) => {
-        const item = { b, color: COLORS[i % COLORS.length] };
-        if (i % 2 === 0) rightB.push(item);
-        else leftB.push(item);
+        const side = sizes[0] <= sizes[1] ? 0 : 1;
+        sizes[side] += countLeaves(b);
+        (side === 0 ? rightB : leftB).push({ b, color: COLORS[i % COLORS.length] });
       });
     }
 
     const rightLeaves = rightB.reduce((acc, x) => acc + countLeaves(x.b), 0);
     const leftLeaves = leftB.reduce((acc, x) => acc + countLeaves(x.b), 0);
-    const maxLeaves = Math.max(1, rightLeaves, leftLeaves);
-    const totalH = Math.max(220, maxLeaves * leafH + 60);
+    const totalH = Math.max(1, rightLeaves, leftLeaves) * LEAF_H;
     const rootY = totalH / 2;
 
-    const rootW = Math.max(90, Math.min(200, Math.round(root.text.length * 9 + 28)));
-    const rootH = 38;
+    const rootW = Math.max(90, Math.ceil(textW(root.text, ROOT_PX, 700) + 36));
+    const rootH = 40;
 
-    const nodesToDraw = [];
+    const nodesToDraw = [{ x: 0, y: rootY, w: rootW, h: rootH, text: root.text, isRoot: true, color: COLORS[0] }];
     const edgesToDraw = [];
 
-    nodesToDraw.push({
-      x: 0,
-      y: rootY,
-      w: rootW,
-      h: rootH,
-      text: root.text,
-      isRoot: true,
-      color: COLORS[0],
-    });
-
-    function layoutSide(sideBranches, isRight) {
-      const totalSideH = sideBranches.reduce((acc, x) => acc + countLeaves(x.b) * leafH, 0);
-      let curY = rootY - totalSideH / 2;
-
-      sideBranches.forEach(({ b, color }) => {
-        function place(node, level, parentX, parentY) {
-          const lCount = countLeaves(node);
-          const nH = lCount * leafH;
-          const y = curY + nH / 2;
-          const w = Math.max(70, Math.min(180, Math.round(node.text.length * 8 + 20)));
-          const h = 30;
-          const x = isRight ? parentX + 130 + w / 2 : parentX - 130 - w / 2;
-
-          nodesToDraw.push({ x, y, w, h, text: node.text, isRoot: false, color });
-          edgesToDraw.push({ x1: parentX, y1: parentY, x2: x, y2: y, color });
-
-          if (node.children && node.children.length) {
-            let childY = curY;
-            node.children.forEach((c) => {
-              const chLeaves = countLeaves(c);
-              const cy = childY + (chLeaves * leafH) / 2;
-              const cw = Math.max(60, Math.min(160, Math.round(c.text.length * 7.5 + 18)));
-              const cx = isRight ? x + w / 2 + 40 + cw / 2 : x - w / 2 - 40 - cw / 2;
-              nodesToDraw.push({ x: cx, y: cy, w: cw, h: 26, text: c.text, isRoot: false, color });
-              edgesToDraw.push({ x1: isRight ? x + w / 2 : x - w / 2, y1: y, x2: cx, y2: cy, color });
-              childY += chLeaves * leafH;
-            });
-          }
-          curY += nH;
-        }
-        place(b, 1, isRight ? rootW / 2 : -rootW / 2, rootY);
+    /* Placement récursif, sans limite de profondeur */
+    function place(node, level, startY, anchorX, anchorY, isRight, color) {
+      const nH = countLeaves(node) * LEAF_H;
+      const y = startY + nH / 2;
+      const w = Math.max(64, Math.ceil(textW(node.text, NODE_PX) + 26));
+      const h = level === 1 ? 32 : 28;
+      const gapX = level === 1 ? 64 : 38;
+      const x = isRight ? anchorX + gapX + w / 2 : anchorX - gapX - w / 2;
+      nodesToDraw.push({ x, y, w, h, text: node.text, isRoot: false, color });
+      edgesToDraw.push({ x1: anchorX, y1: anchorY, x2: isRight ? x - w / 2 : x + w / 2, y2: y, color });
+      let childY = startY;
+      (node.children || []).forEach((c) => {
+        place(c, level + 1, childY, isRight ? x + w / 2 : x - w / 2, y, isRight, color);
+        childY += countLeaves(c) * LEAF_H;
       });
     }
 
+    function layoutSide(list, isRight) {
+      const sideH = list.reduce((acc, x) => acc + countLeaves(x.b) * LEAF_H, 0);
+      let curY = rootY - sideH / 2;
+      list.forEach(({ b, color }) => {
+        place(b, 1, curY, isRight ? rootW / 2 : -rootW / 2, rootY, isRight, color);
+        curY += countLeaves(b) * LEAF_H;
+      });
+    }
     layoutSide(rightB, true);
-    if (leftB.length) layoutSide(leftB, false);
+    layoutSide(leftB, false);
 
     let minX = -rootW / 2, maxX = rootW / 2, minY = rootY - rootH / 2, maxY = rootY + rootH / 2;
     nodesToDraw.forEach((nd) => {
@@ -887,14 +949,11 @@
       maxY = Math.max(maxY, nd.y + nd.h / 2);
     });
     const pad = 24;
-    const vbW = Math.round(maxX - minX + pad * 2);
-    const vbH = Math.round(maxY - minY + pad * 2);
-    const vbX = Math.round(minX - pad);
-    const vbY = Math.round(minY - pad);
+    const vbW = Math.ceil(maxX - minX + pad * 2);
+    const vbH = Math.ceil(maxY - minY + pad * 2);
 
-    const svg = s('svg', { viewBox: vbX + ' ' + vbY + ' ' + vbW + ' ' + vbH, class: 'diagram-svg', role: 'img', width: vbW, height: vbH });
-    svg.style.maxWidth = vbW + 'px';
-    svg.style.width = '100%';
+    const svg = s('svg', { viewBox: [Math.floor(minX - pad), Math.floor(minY - pad), vbW, vbH].join(' '), class: 'diagram-svg', role: 'img' });
+    sizeSvg(svg, vbW, vbH, 0.7, 1.15);
 
     edgesToDraw.forEach((e) => {
       const dx = (e.x2 - e.x1) * 0.5;
@@ -916,7 +975,7 @@
       g.append(rect);
       g.append(s('text', {
         x: nd.x,
-        y: nd.y + 4,
+        y: nd.y + 4.5,
         class: 'mindmap-text' + (nd.isRoot ? ' root' : ''),
         'text-anchor': 'middle',
         text: nd.text,
@@ -930,78 +989,88 @@
 
   function renderTimeline(n) {
     if (!n.items || !n.items.length) return null;
-    const items = n.items;
 
-    const maxEvLen = Math.max(...items.flatMap((it) => it.events.map((e) => e.length)), 6);
-    const cardW = Math.max(160, Math.min(240, Math.round(maxEvLen * 7.5 + 24)));
-    const stepW = cardW + 30;
-    const padX = 40;
-    const totalW = padX * 2 + items.length * stepW;
-    const cy = 160;
-    const totalH = 320;
+    const PERIOD_PX = 14, EV_PX = 13, LH = 18, PADX = 13, MAX_TEXT = 220, BULLET = 13;
+    const STEM = 34, GAP = 14, MIN_DOT = 64, PAD = 20;
 
-    const svg = s('svg', { viewBox: '0 0 ' + totalW + ' ' + totalH, class: 'diagram-svg', role: 'img', width: totalW, height: totalH });
-    svg.style.maxWidth = totalW + 'px';
-    svg.style.width = '100%';
+    /* Chaque carte : texte coupé à MAX_TEXT, largeur et hauteur mesurées */
+    const cards = n.items.map((it) => {
+      const multi = it.events.length > 1;
+      const evLines = it.events.map((ev) => wrapText(ev, MAX_TEXT - (multi ? BULLET : 0), EV_PX));
+      let tw = textW(it.period, PERIOD_PX, 700);
+      evLines.forEach((ls) => ls.forEach((l) => { tw = Math.max(tw, textW(l, EV_PX) + (multi ? BULLET : 0)); }));
+      const nLines = evLines.reduce((a, ls) => a + ls.length, 0);
+      const w = Math.max(120, Math.ceil(tw + PADX * 2));
+      const hgt = nLines ? 40 + (nLines - 1) * LH + (it.events.length - 1) * 5 + 12 : 32;
+      return { it, multi, evLines, w, h: hgt };
+    });
+
+    /* Placement : les cartes alternent haut/bas, donc deux voisines de même côté se partagent la place */
+    const xs = [];
+    const lastRight = [-Infinity, -Infinity];
+    cards.forEach((c, i) => {
+      const side = i % 2;
+      let x = i === 0 ? c.w / 2 : xs[i - 1] + MIN_DOT;
+      x = Math.max(x, lastRight[side] + GAP + c.w / 2);
+      xs.push(x);
+      lastRight[side] = x + c.w / 2;
+    });
+    const minLeft = Math.min(...cards.map((c, i) => xs[i] - c.w / 2));
+    const maxRight = Math.max(...cards.map((c, i) => xs[i] + c.w / 2));
+    const off = PAD - minLeft;
+    const totalW = Math.ceil(maxRight + off + PAD);
+
+    const topH = Math.max(0, ...cards.filter((_, i) => i % 2 === 0).map((c) => c.h));
+    const botH = Math.max(0, ...cards.filter((_, i) => i % 2 === 1).map((c) => c.h));
+    const cy = PAD + (topH ? topH + STEM : 24);
+    const totalH = Math.ceil(cy + (botH ? STEM + botH : 24) + PAD);
+
+    const svg = s('svg', { viewBox: '0 0 ' + totalW + ' ' + totalH, class: 'diagram-svg', role: 'img' });
+    sizeSvg(svg, totalW, totalH, 0.9, 1.3);
     addArrowDefs(svg);
 
     svg.append(s('line', {
-      x1: 20,
+      x1: 6,
       y1: cy,
-      x2: totalW - 20,
+      x2: totalW - 6,
       y2: cy,
       class: 'timeline-axis',
       'marker-end': 'url(#rdt-arrow)',
     }));
 
-    items.forEach((it, idx) => {
-      const x = padX + idx * stepW + stepW / 2;
+    cards.forEach((c, idx) => {
+      const x = xs[idx] + off;
       const isTop = idx % 2 === 0;
       const color = COLORS[idx % COLORS.length];
-
-      svg.append(s('circle', { cx: x, cy, r: 6, class: 'timeline-dot', fill: color }));
-
-      const cardH = 26 + it.events.length * 20;
-      const cardY = isTop ? cy - 30 - cardH : cy + 30;
+      const cardY = isTop ? cy - STEM - c.h : cy + STEM;
+      const left = x - c.w / 2;
 
       svg.append(s('line', {
         x1: x,
-        y1: isTop ? cy - 6 : cy + 6,
+        y1: isTop ? cy - 7 : cy + 7,
         x2: x,
-        y2: isTop ? cy - 30 : cy + 30,
+        y2: isTop ? cy - STEM : cy + STEM,
         class: 'timeline-stem',
         stroke: color,
         'stroke-width': 1.8,
       }));
+      svg.append(s('circle', { cx: x, cy, r: 7, class: 'timeline-dot', fill: color }));
 
       const g = s('g', { class: 'timeline-item' });
-      g.append(s('rect', {
-        x: x - cardW / 2,
-        y: cardY,
-        width: cardW,
-        height: cardH,
-        rx: 6,
-        class: 'timeline-card',
-      }));
+      g.append(s('rect', { x: left, y: cardY, width: c.w, height: c.h, rx: 7, class: 'timeline-card' }));
+      g.append(s('text', { x: left + PADX, y: cardY + 20, class: 'timeline-period', fill: color, text: c.it.period }));
 
-      g.append(s('text', {
-        x: x - cardW / 2 + 10,
-        y: cardY + 16,
-        class: 'timeline-period',
-        fill: color,
-        text: it.period,
-      }));
-
-      it.events.forEach((ev, j) => {
-        g.append(s('text', {
-          x: x - cardW / 2 + 12,
-          y: cardY + 34 + j * 18,
-          class: 'timeline-event',
-          text: (it.events.length > 1 ? '• ' : '') + ev,
-        }));
+      let y = cardY + 42;
+      c.evLines.forEach((lines, j) => {
+        lines.forEach((l, k) => {
+          if (c.multi && k === 0) g.append(s('text', { x: left + PADX, y, class: 'timeline-event', text: '•' }));
+          g.append(s('text', { x: left + PADX + (c.multi ? BULLET : 0), y, class: 'timeline-event', text: l }));
+          y += LH;
+        });
+        y += 5;
       });
 
-      g.append(s('title', { text: it.period + ' : ' + it.events.join(' | ') }));
+      g.append(s('title', { text: c.it.period + ' : ' + c.it.events.join(' | ') }));
       svg.append(g);
     });
 
