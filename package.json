@@ -13,7 +13,7 @@
   "categories": ["Programming Languages"],
   "main": "./src/extension.js",
   "activationEvents": [],
-  "scripts": { "test": "node test.js" },
+  "scripts": { "test": "node test.js && node test-v11.js" },
   "contributes": {
     "languages": [
       {

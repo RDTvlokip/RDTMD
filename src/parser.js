@@ -17,22 +17,15 @@ const RE = {
   open: /^:{3,}\s*([A-Za-z]+)\b\s*(.*)$/,
   close: /^:{3,}\s*$/,
   include: /^@include\s+(.+?)\s*$/,
+  toc: /^@toc(?:\s+([1-6]))?\s*$/,
+  footnote: /^\[\^([^\]\s]+)\]:\s*(.*)$/,
 };
 const CALLOUTS = new Set(['note', 'tip', 'warn', 'danger']);
-const CHARTS = new Set(['bar', 'line', 'pie']);
-const DIAGRAMS = new Set(['flow', 'sequence', 'mindmap', 'timeline']);
+const DIRECTIVES = ['chart', 'diagram', 'tabs', 'metrics', 'kpi', 'chat', 'dialog', 'details', 'accordion', 'note', 'tip', 'warn', 'danger'];
 
-const diag = (line, severity, message) => ({ line, severity, message });
-
-function indentOf(l) {
-  let n = 0;
-  for (const c of l) {
-    if (c === ' ') n++;
-    else if (c === '\t') n += 4;
-    else break;
-  }
-  return n;
-}
+const { diag, indentOf, closest } = require('./util');
+const { parseChart } = require('./parse-chart');
+const { parseDiagram } = require('./parse-diagrams');
 
 function dedent(l, n) {
   let col = 0, k = 0;
@@ -71,242 +64,14 @@ function isTableStart(lines, i) {
 function isBlockStart(lines, i, inPara) {
   const l = lines[i];
   if (RE.fence.test(l) || RE.mathFence.test(l) || RE.mathOne.test(l) || RE.heading.test(l) ||
-      RE.hr.test(l) || RE.quote.test(l) || RE.open.test(l) || RE.include.test(l)) return true;
+      RE.hr.test(l) || RE.quote.test(l) || RE.open.test(l) || RE.include.test(l) ||
+      RE.toc.test(l) || RE.footnote.test(l)) return true;
   const m = RE.list.exec(l);
   if (m) {
     if (inPara && /^\d/.test(m[2]) && parseInt(m[2], 10) !== 1) return false;
     return true;
   }
   return isTableStart(lines, i);
-}
-
-function splitList(s) {
-  return s.split(',').map((x) => x.trim()).filter((x) => x !== '');
-}
-
-function toNum(s, ln, diags) {
-  if (s === undefined) return 0;
-  const v = Number(s);
-  if (Number.isNaN(v)) { diags.push(diag(ln, 'error', `Nombre invalide : "${s}"`)); return 0; }
-  return v;
-}
-
-function parseChart(args, body, bodyBase, line, diags) {
-  const am = /^(\S*)\s*(.*)$/.exec(args);
-  let kind = am[1].toLowerCase();
-  const title = am[2].trim().replace(/^"(.*)"$/, '$1');
-  if (!CHARTS.has(kind)) {
-    diags.push(diag(line, 'error', kind
-      ? `Type de graphique inconnu "${kind}" (bar, line, pie)`
-      : 'Type de graphique manquant (bar, line, pie)'));
-    kind = 'bar';
-  }
-  let unit = '', categories = null;
-  const raw = [];
-  body.forEach((l, k) => {
-    const ln = bodyBase + k, t = l.trim();
-    if (!t || t.startsWith('//')) return;
-    let m = /^@(\w+)\s*(.*)$/.exec(t);
-    if (m) {
-      if (m[1] === 'unit') unit = m[2];
-      else diags.push(diag(ln, 'warning', `Option inconnue "@${m[1]}"`));
-      return;
-    }
-    m = /^(.+?)\s*:\s*(.*)$/.exec(t);
-    if (!m) { diags.push(diag(ln, 'error', 'Ligne invalide, attendu "nom: valeurs"')); return; }
-    if (m[1].toLowerCase() === 'x') { categories = splitList(m[2]); return; }
-    raw.push({ name: m[1], parts: splitList(m[2]), ln });
-  });
-  if (!raw.length) diags.push(diag(line, 'warning', 'Graphique sans données'));
-  let series;
-  if (categories) {
-    series = raw.map((r) => {
-      if (r.parts.length !== categories.length) {
-        diags.push(diag(r.ln, 'error', `"${r.name}" : ${r.parts.length} valeur(s) pour ${categories.length} catégorie(s)`));
-      }
-      return { name: r.name, values: categories.map((_, idx) => toNum(r.parts[idx], r.ln, diags)) };
-    });
-  } else {
-    categories = raw.map((r) => r.name);
-    raw.forEach((r) => {
-      if (r.parts.length !== 1) diags.push(diag(r.ln, 'error', `Une seule valeur attendue pour "${r.name}" (ou ajoute une ligne "x: ...")`));
-    });
-    series = [{ name: 'valeur', values: raw.map((r) => toNum(r.parts[0], r.ln, diags)) }];
-  }
-  return { type: 'chart', kind, title, unit, categories, series, line };
-}
-
-function parseFlow(title, body, bodyBase, line, diags) {
-  let dir = 'LR';
-  const nodes = [];
-  const nodeSet = new Set();
-  const edges = [];
-  const addNode = (name) => {
-    if (!name) return;
-    if (!nodeSet.has(name)) {
-      nodeSet.add(name);
-      nodes.push(name);
-    }
-  };
-
-  body.forEach((l, k) => {
-    const ln = bodyBase + k, t = l.trim();
-    if (!t || t.startsWith('//')) return;
-    const opt = /^@(\w+)\s*(.*)$/.exec(t);
-    if (opt) {
-      if (opt[1].toLowerCase() === 'dir') {
-        const d = opt[2].trim().toUpperCase();
-        if (d === 'LR' || d === 'TD') {
-          dir = d;
-        } else {
-          diags.push(diag(ln, 'warning', `Option @dir invalide "${opt[2]}" (LR ou TD attendu)`));
-        }
-      } else {
-        diags.push(diag(ln, 'warning', `Option inconnue "@${opt[1]}"`));
-      }
-      return;
-    }
-
-    const em = /^\s*(.+?)\s*(-->|->)\s*(.+?)(?:\s*:\s*(.*))?$/.exec(t);
-    if (!em) {
-      diags.push(diag(ln, 'error', 'Ligne invalide, attendu "A -> B" ou "A --> B [: label]"'));
-      return;
-    }
-    const from = em[1].trim();
-    const to = em[3].trim();
-    const style = em[2] === '-->' ? 'dashed' : 'solid';
-    const label = (em[4] || '').trim();
-    addNode(from);
-    addNode(to);
-    edges.push({ from, to, style, label, ln });
-  });
-
-  return { type: 'diagram', kind: 'flow', title, dir, nodes, edges, line };
-}
-
-function parseSequence(title, body, bodyBase, line, diags) {
-  const participants = [];
-  const partSet = new Set();
-  const messages = [];
-  const addPart = (name) => {
-    if (!name) return;
-    if (!partSet.has(name)) {
-      partSet.add(name);
-      participants.push(name);
-    }
-  };
-
-  body.forEach((l, k) => {
-    const ln = bodyBase + k, t = l.trim();
-    if (!t || t.startsWith('//')) return;
-    const opt = /^@(\w+)\s*(.*)$/.exec(t);
-    if (opt) {
-      diags.push(diag(ln, 'warning', `Option inconnue "@${opt[1]}"`));
-      return;
-    }
-    const em = /^\s*(.+?)\s*(-->|->)\s*(.+?)(?:\s*:\s*(.*))?$/.exec(t);
-    if (!em) {
-      diags.push(diag(ln, 'error', 'Ligne invalide, attendu "A -> B : message"'));
-      return;
-    }
-    const from = em[1].trim();
-    const to = em[3].trim();
-    const style = em[2] === '-->' ? 'dashed' : 'solid';
-    const label = (em[4] || '').trim();
-    addPart(from);
-    addPart(to);
-    messages.push({ from, to, style, label, ln });
-  });
-
-  return { type: 'diagram', kind: 'sequence', title, participants, messages, line };
-}
-
-function parseMindmap(title, body, bodyBase, line, diags) {
-  let root = null;
-  const stack = [];
-
-  body.forEach((l, k) => {
-    const ln = bodyBase + k;
-    if (RE.blank.test(l) || l.trim().startsWith('//')) return;
-    const depth = Math.floor(indentOf(l) / 2);
-    const text = l.trim();
-    const node = { text, children: [] };
-
-    if (!root) {
-      root = node;
-      stack.push({ depth, node });
-      return;
-    }
-
-    while (stack.length > 0 && stack[stack.length - 1].depth >= depth) {
-      stack.pop();
-    }
-
-    if (stack.length > 0) {
-      stack[stack.length - 1].node.children.push(node);
-    } else {
-      root.children.push(node);
-    }
-    stack.push({ depth, node });
-  });
-
-  if (!root) {
-    root = { text: title || 'Mindmap', children: [] };
-  }
-
-  return { type: 'diagram', kind: 'mindmap', title, root, line };
-}
-
-function parseTimeline(title, body, bodyBase, line, diags) {
-  const items = [];
-
-  body.forEach((l, k) => {
-    const ln = bodyBase + k, t = l.trim();
-    if (!t || t.startsWith('//')) return;
-    const m = /^(.+?)\s*:\s*(.*)$/.exec(t);
-    if (!m) {
-      diags.push(diag(ln, 'error', 'Ligne invalide, attendu "période: événement"'));
-      return;
-    }
-    const period = m[1].trim();
-    const events = m[2].split('|').map((s) => s.trim()).filter(Boolean);
-    if (!events.length) {
-      diags.push(diag(ln, 'warning', `Aucun événement pour la période "${period}"`));
-    }
-    items.push({ period, events, ln });
-  });
-
-  return { type: 'diagram', kind: 'timeline', title, items, line };
-}
-
-function parseDiagram(args, body, bodyBase, line, diags) {
-  const am = /^(\S*)\s*(.*)$/.exec(args);
-  let kind = am[1].toLowerCase();
-  const title = am[2].trim().replace(/^"(.*)"$/, '$1');
-  if (!DIAGRAMS.has(kind)) {
-    diags.push(diag(line, 'error', kind
-      ? `Type de diagramme inconnu "${kind}" (flow, sequence, mindmap, timeline)`
-      : 'Type de diagramme manquant (flow, sequence, mindmap, timeline)'));
-    kind = 'flow';
-  }
-
-  const activeLines = body.filter((l) => l.trim() && !l.trim().startsWith('//'));
-  if (!activeLines.length) {
-    diags.push(diag(line, 'warning', 'Diagramme sans données'));
-  }
-
-  switch (kind) {
-    case 'flow':
-      return parseFlow(title, body, bodyBase, line, diags);
-    case 'sequence':
-      return parseSequence(title, body, bodyBase, line, diags);
-    case 'mindmap':
-      return parseMindmap(title, body, bodyBase, line, diags);
-    case 'timeline':
-      return parseTimeline(title, body, bodyBase, line, diags);
-    default:
-      return { type: 'diagram', kind, title, line };
-  }
 }
 
 function parseTabs(args, body, bodyBase, line, diags) {
@@ -540,7 +305,7 @@ function parseDirective(lines, i, base, diags, out) {
     body.push(cur);
     i++;
   }
-  if (i >= lines.length) diags.push(diag(base + start, 'error', `Bloc ":::${name}" non fermé (":::" manquant)`));
+  if (i >= lines.length) diags.push(diag(base + start, 'error', `Bloc ":::${name}" non fermé (":::" manquant)`, 'unclosed', { name, fence: fence.length }));
   else i++;
   const bodyBase = base + start + 1;
   if (name === 'chart') {
@@ -558,7 +323,8 @@ function parseDirective(lines, i, base, diags, out) {
   } else if (CALLOUTS.has(name)) {
     out.push({ type: 'callout', kind: name, title: args, children: parseBlocks(body, bodyBase, diags), line: base + start });
   } else {
-    diags.push(diag(base + start, 'warning', `Directive inconnue ":::${name}"`));
+    const hint = closest(name, DIRECTIVES);
+    diags.push(diag(base + start, 'warning', `Directive inconnue ":::${name}"${hint ? ` — vouliez-vous dire ":::${hint}" ?` : ''}`, 'unknown-directive', { got: name, hint }));
     out.push(...parseBlocks(body, bodyBase, diags));
   }
   return i;
@@ -695,8 +461,25 @@ function parseBlocks(lines, base, diags) {
       continue;
     }
     if ((m = RE.heading.exec(line))) {
-      out.push({ type: 'heading', level: m[1].length, inline: parseInline(m[2]), line: base + i });
+      let text = m[2], id = '';
+      const im = /\s*\{#([A-Za-z0-9_-]+)\}\s*$/.exec(text);
+      if (im) { id = im[1]; text = text.slice(0, im.index); }
+      const node = { type: 'heading', level: m[1].length, inline: parseInline(text), line: base + i };
+      if (id) node.id = id;
+      out.push(node);
       i++;
+      continue;
+    }
+    if ((m = RE.toc.exec(line))) {
+      out.push({ type: 'toc', depth: m[1] ? Number(m[1]) : 3, line: base + i });
+      i++;
+      continue;
+    }
+    if ((m = RE.footnote.exec(line))) {
+      const start = i, buf = [m[2]];
+      i++;
+      while (i < lines.length && !RE.blank.test(lines[i]) && indentOf(lines[i]) >= 2) buf.push(lines[i++].trim());
+      out.push({ type: 'footnote', id: m[1], inline: parseInline(buf.join('\n')), line: base + start });
       continue;
     }
     if (RE.hr.test(line)) { out.push({ type: 'hr', line: base + i }); i++; continue; }
@@ -835,6 +618,10 @@ function parseInline(text) {
       const p = parseLinkAt(text, i + 1);
       if (p) { flush(); out.push({ type: 'image', alt: p.label, src: p.href, title: p.title }); i = p.end; continue; }
     }
+    if (c === '[' && text[i + 1] === '^') {
+      const fm = /^\[\^([^\]\s]+)\]/.exec(text.slice(i));
+      if (fm) { flush(); out.push({ type: 'footref', id: fm[1] }); i += fm[0].length; continue; }
+    }
     if (c === '[') {
       const p = parseLinkAt(text, i);
       if (p) { flush(); out.push({ type: 'link', href: p.href, title: p.title, children: parseInline(p.label) }); i = p.end; continue; }
@@ -878,10 +665,48 @@ function parseInline(text) {
   return out;
 }
 
+/** Vérifie que chaque [^id] a sa définition et que chaque définition est utilisée. */
+function checkFootnotes(children, diagnostics) {
+  const defs = new Map(), refs = [];
+  const scanInline = (nodes, line) => {
+    for (const n of nodes || []) {
+      if (n.type === 'footref') refs.push({ id: n.id, line });
+      if (n.children) scanInline(n.children, line);
+    }
+  };
+  const scan = (nodes, line) => {
+    for (const n of nodes || []) {
+      if (!n || typeof n !== 'object') continue;
+      const ln = typeof n.line === 'number' ? n.line : line;
+      if (n.type === 'footnote') {
+        if (defs.has(n.id)) diagnostics.push(diag(n.line, 'warning', `Note de bas de page "[^${n.id}]" définie deux fois`, 'dup-footnote'));
+        defs.set(n.id, n.line);
+      }
+      if (n.inline) scanInline(n.inline, ln);
+      if (n.header) n.header.forEach((cell) => scanInline(cell, ln));
+      if (n.rows) n.rows.forEach((r) => r.forEach((cell) => scanInline(cell, ln)));
+      if (n.messages) n.messages.forEach((m) => scanInline(m.inline, m.line));
+      if (n.items) n.items.forEach((it) => scan(it.children, ln));
+      if (n.tabs) n.tabs.forEach((t) => scan(t.children, ln));
+      if (n.children) scan(n.children, ln);
+    }
+  };
+  scan(children, 0);
+  const used = new Set();
+  refs.forEach((r) => {
+    used.add(r.id);
+    if (!defs.has(r.id)) diagnostics.push(diag(r.line, 'warning', `Note de bas de page "[^${r.id}]" sans définition (ajoute "[^${r.id}]: texte")`, 'footnote-missing', { id: r.id }));
+  });
+  defs.forEach((line, id) => {
+    if (!used.has(id)) diagnostics.push(diag(line, 'warning', `Note de bas de page "[^${id}]" jamais citée`, 'footnote-unused', { id }));
+  });
+}
+
 function parse(src) {
   const lines = String(src).replace(/\r\n?/g, '\n').split('\n');
   const diagnostics = [];
   const children = parseBlocks(lines, 0, diagnostics);
+  checkFootnotes(children, diagnostics);
   return { ast: { type: 'doc', children }, diagnostics };
 }
 
