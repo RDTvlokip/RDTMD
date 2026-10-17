@@ -12,6 +12,8 @@
     { "include": "#details" },
     { "include": "#directive" },
     { "include": "#include" },
+    { "include": "#toc" },
+    { "include": "#footnote" },
     { "include": "#heading" },
     { "include": "#hr" },
     { "include": "#tablesep" },
@@ -461,7 +463,12 @@
           "captures": {
             "1": { "name": "entity.name.tag.rdtmd" },
             "2": { "name": "punctuation.separator.key-value.rdtmd" },
-            "3": { "patterns": [{ "match": "-?\\d+(?:\\.\\d+)?", "name": "constant.numeric.rdtmd" }] }
+            "3": {
+              "patterns": [
+                { "match": "\\(\\s*-?\\d+(?:\\.\\d+)?\\s*[,;]\\s*-?\\d+(?:\\.\\d+)?\\s*\\)", "name": "constant.numeric.point.rdtmd" },
+                { "match": "-?\\d+(?:\\.\\d+)?", "name": "constant.numeric.rdtmd" }
+              ]
+            }
           }
         }
       ]
@@ -486,7 +493,20 @@
           }
         },
         {
-          "match": "(-->|->)",
+          "match": "^\\s*(group|subgraph|end|section|entity|class|participant|actor|activate|deactivate|alt|else|opt|loop|par|and|note\\s+(?:over|left\\s+of|right\\s+of))\\b",
+          "captures": { "1": { "name": "keyword.control.diagram.rdtmd" } }
+        },
+        { "match": "\\[\\*\\]", "name": "constant.language.state.rdtmd" },
+        { "match": "\\b\\d{4}-\\d{2}-\\d{2}\\b", "name": "constant.numeric.date.rdtmd" },
+        { "match": "(?<=[:,]\\s)\\d+(?:\\.\\d+)?\\s*[djwsDJWS]\\b", "name": "constant.numeric.duration.rdtmd" },
+        { "match": "(?<=[:,]\\s)(milestone|done|active|crit)(?=\\s*(?:,|$))", "name": "keyword.other.status.rdtmd" },
+        { "match": "(?<=[:,]\\s)after(?=\\s)", "name": "keyword.other.status.rdtmd" },
+        { "match": "\\b(PK|FK|UK)\\b", "name": "keyword.other.key.rdtmd" },
+        { "match": "(?<=\\s|--)(0\\.\\.1|1\\.\\.\\*|0\\.\\.\\*)(?=--|\\s)", "name": "constant.numeric.cardinality.rdtmd" },
+        { "match": "\\{(?:#[0-9a-fA-F]{3,8}|[a-z]{3,20})\\}\\s*$", "name": "constant.other.color.rdtmd" },
+        { "match": "(\\(\\(|\\)\\)|\\[\\(|\\)\\]|\\{\\{|\\}\\})", "name": "punctuation.section.shape.rdtmd" },
+        {
+          "match": "(-->|->|--\\|>|<\\|--|\\.\\.\\|>|<\\|\\.\\.|(?<=\\s)\\*--|--\\*|(?<=\\s)o--|--o(?=\\s)|<--|\\.\\.>|<\\.\\.)",
           "name": "keyword.operator.arrow.rdtmd"
         },
         {
@@ -611,6 +631,21 @@
         "2": { "name": "string.unquoted.path.rdtmd" }
       }
     },
+    "toc": {
+      "match": "^(@toc)(?:\\s+([1-6]))?\\s*$",
+      "captures": {
+        "1": { "name": "keyword.control.import.rdtmd" },
+        "2": { "name": "constant.numeric.rdtmd" }
+      }
+    },
+    "footnote": {
+      "match": "^(\\[\\^)([^\\]\\s]+)(\\]:)",
+      "captures": {
+        "1": { "name": "punctuation.definition.footnote.rdtmd" },
+        "2": { "name": "entity.name.footnote.rdtmd" },
+        "3": { "name": "punctuation.definition.footnote.rdtmd" }
+      }
+    },
     "heading": {
       "match": "^\\s{0,3}(#{1,6})\\s+(.+?)(?:\\s+#+)?\\s*$",
       "name": "markup.heading.rdtmd",
@@ -642,6 +677,8 @@
       "patterns": [
         { "match": "\\\\[\\\\`*_{}\\[\\]()#+\\-.!|~$>:@]", "name": "constant.character.escape.rdtmd" },
         { "match": "(`+)(.+?)\\1", "name": "markup.inline.raw.string.rdtmd" },
+        { "match": "\\[\\^[^\\]\\s]+\\]", "name": "constant.other.footnote-ref.rdtmd" },
+        { "match": "\\{#[A-Za-z0-9_-]+\\}\\s*$", "name": "constant.other.anchor.rdtmd" },
         { "match": "\\$\\$[^$\\n]+\\$\\$|\\$(?![\\s$])[^$\\n]*?(?<![\\s\\\\])\\$(?!\\d)", "name": "markup.math.inline.rdtmd" },
         {
           "match": "(!\\[)([^\\]]*)(\\])(\\()([^)\\s]*)(?:\\s+\"[^\"]*\")?(\\))",
