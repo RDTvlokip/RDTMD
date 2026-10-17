@@ -276,4 +276,52 @@ const codes = (diags) => diags.map((d) => d.code).filter(Boolean);
   assert.strictEqual(diags[0].code, 'unclosed');
 }
 
+/* ---------- non-régression : plantages trouvés par le fuzzing ---------- */
+{
+  // une URL en cours de frappe ne doit pas faire lever d'exception
+  ['voir http://', 'voir http:// ici', 'a http://<b', 'https://', '(http://)', '**http://**'].forEach((s) => {
+    assert.doesNotThrow(() => parse(s), s);
+  });
+  const ok = parse('voir http://exemple.org/page.').ast.children[0].inline;
+  assert(ok.some((n) => n.type === 'link' && n.href === 'http://exemple.org/page'), 'URL complète toujours liée');
+  // U+2028 / U+2029 ne doivent casser aucune expression régulière de ligne
+  const ls = String.fromCharCode(0x2028), ps = String.fromCharCode(0x2029);
+  ['::: diagram class\nA --' + ls + ' B\n:::', ':::diagram er\nentity A\n  id:' + ps + ' int PK\n:::', 'x' + ls + 'y\n# T' + ps + '\n'].forEach((s) => {
+    assert.doesNotThrow(() => parse(s));
+  });
+}
+
+/* ---------- non-régression : robustesse (complexité, profondeur) ---------- */
+{
+  const timed = (label, doc, maxMs) => {
+    const t0 = Date.now();
+    assert.doesNotThrow(() => parse(doc), label);
+    const ms = Date.now() - t0;
+    assert(ms < maxMs, `${label} : ${ms} ms (limite ${maxMs} ms)`);
+  };
+  // marqueurs inline non fermés : jadis quadratiques (plus de 8 s pour 20 000 marqueurs)
+  ['*a ', '**a ', '_a ', '~~a ', '[a ', '![a ', '[a](b ', '$a ', '**a *b '].forEach((u) => timed('inline ' + u, u.repeat(20000), 3000));
+  // suites d'espaces dans les lignes de blocs et les titres
+  const sp = ' '.repeat(40000);
+  timed('titre', '# a' + sp + 'b', 1500);
+  timed('chart', ':::chart bar\nA' + sp + 'x\n:::', 1500);
+  timed('flow', ':::diagram flow\nA' + sp + 'x\n:::', 1500);
+  timed('er', ':::diagram er\nA' + sp + 'x\n:::', 1500);
+  timed('class', ':::diagram class\nA' + sp + '--|>' + sp + 'B\n:::', 1500);
+  timed('metrics', ':::metrics\nA: 1 ' + '(x'.repeat(20000) + '\n:::', 1500);
+  // imbrication profonde : plus de dépassement de pile
+  timed('citations', '>'.repeat(5000) + ' x', 2000);
+  timed('directives non fermées', ':::note\n'.repeat(5000), 3000);
+  const deep = parse(':::note\n'.repeat(1000));
+  assert(deep.diagnostics.some((d) => d.code === 'too-deep'), 'diagnostic too-deep attendu');
+  // le texte d'un titre n'est pas altéré par la réécriture manuelle de la détection
+  const h = (s) => parse(s).ast.children[0];
+  assert.strictEqual(h('# Titre ##').inline[0].value, 'Titre');
+  assert.strictEqual(h('## C# ').inline[0].value, 'C#');
+  assert.strictEqual(h('### a # #').inline[0].value, 'a #');
+  assert.strictEqual(h('# Titre {#ancre}').id, 'ancre');
+  assert.strictEqual(h('#######').type, 'paragraph');
+  assert.strictEqual(h('#hashtag').type, 'paragraph');
+}
+
 console.log('TESTS 1.1.0 : OK');

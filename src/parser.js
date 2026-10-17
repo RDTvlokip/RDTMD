@@ -9,7 +9,8 @@ const RE = {
   fence: /^\s{0,3}(`{3,})\s*(.*)$/,
   mathFence: /^\s{0,3}\$\$\s*$/,
   mathOne: /^\s{0,3}\$\$(.+)\$\$\s*$/,
-  heading: /^\s{0,3}(#{1,6})\s+(.+?)(?:\s+#+)?\s*$/,
+  /* écrit à la main : l'expression régulière équivalente est quadratique sur les longues suites d'espaces */
+  heading: { test: (l) => headingMatch(l) !== null, exec: (l) => headingMatch(l) },
   hr: /^\s{0,3}([-*_])(?:\s*\1){2,}\s*$/,
   quote: /^\s{0,3}>\s?(.*)$/,
   list: /^(\s*)([-*+]|\d{1,9}[.)])\s+(.*)$/,
@@ -146,7 +147,7 @@ function parseMetrics(args, body, bodyBase, line, diags) {
     let valPart = m[2].trim();
     let diff = '', diffType = 'neutral';
 
-    const dm = /^(.*?)\s*\(([^)]+)\)\s*$/.exec(valPart);
+    const dm = valPart.length > 2000 ? null : /^(.*?)\s*\(([^)]+)\)\s*$/.exec(valPart);
     if (dm) {
       valPart = dm[1].trim();
       let rawDiff = dm[2].trim();
@@ -211,7 +212,7 @@ function parseChat(args, body, bodyBase, line, diags) {
       messages.push({
         role: curRole,
         sender: curSender,
-        inline: parseInline(fullText, curLn, diags),
+        inline: parseInline(fullText),
         raw: fullText,
         line: curLn,
       });
@@ -264,6 +265,17 @@ function parseDetails(args, body, bodyBase, line, diags) {
   return { type: 'details', title, open, children, line };
 }
 
+/**
+ * Lignes de données des graphiques, diagrammes et métriques : au-delà de 256 caractères, les suites d'espaces internes sont
+ * ramenées à un seul espace (l'indentation de début de ligne est conservée). Sans cela, les expressions régulières lazy
+ * "(.+?)\s*:" deviennent quadratiques sur une ligne contenant des milliers d'espaces.
+ */
+function squeeze(l) {
+  if (l.length <= 256) return l;
+  const lead = /^\s*/.exec(l)[0].length;
+  return l.slice(0, lead) + l.slice(lead).replace(/\s{2,}/g, ' ');
+}
+
 function parseDirective(lines, i, base, diags, out) {
   const m = /^(:{3,})\s*([A-Za-z]+)\b\s*(.*)$/.exec(lines[i]);
   const fence = m[1];
@@ -272,7 +284,10 @@ function parseDirective(lines, i, base, diags, out) {
   let depth = 1;
   i++;
   const body = [];
-  let inCode = false, codeFenceChar = '', codeFenceLen = 0;
+  let inCode = false, codeCloseRe = null;
+  /* expressions construites une seule fois par directive (et non à chaque ligne) */
+  const closeRe = new RegExp(`^:{${fence.length},}\\s*$`);
+  const openRe = new RegExp(`^:{${fence.length},}\\s*([A-Za-z]+)\\b`);
 
   while (i < lines.length) {
     const cur = lines[i];
@@ -280,21 +295,19 @@ function parseDirective(lines, i, base, diags, out) {
     const fMatch = /^\s{0,3}(`{3,}|~{3,})/.exec(cur);
     if (!inCode && fMatch) {
       inCode = true;
-      codeFenceChar = fMatch[1][0];
-      codeFenceLen = fMatch[1].length;
+      codeCloseRe = new RegExp(`^\\s{0,3}${fMatch[1][0]}{${fMatch[1].length},}\\s*$`);
       body.push(cur);
       i++;
       continue;
     } else if (inCode) {
-      const cMatch = new RegExp(`^\\s{0,3}${codeFenceChar}{${codeFenceLen},}\\s*$`).test(cur);
-      if (cMatch) inCode = false;
+      if (codeCloseRe.test(cur)) inCode = false;
       body.push(cur);
       i++;
       continue;
     }
 
-    const closeMatch = new RegExp(`^:{${fence.length},}\\s*$`).test(cur);
-    const openMatch = new RegExp(`^:{${fence.length},}\\s*([A-Za-z]+)\\b`).test(cur);
+    const closeMatch = closeRe.test(cur);
+    const openMatch = openRe.test(cur);
 
     if (closeMatch) {
       depth--;
@@ -309,13 +322,13 @@ function parseDirective(lines, i, base, diags, out) {
   else i++;
   const bodyBase = base + start + 1;
   if (name === 'chart') {
-    out.push(parseChart(args, body, bodyBase, base + start, diags));
+    out.push(parseChart(args, body.map(squeeze), bodyBase, base + start, diags));
   } else if (name === 'diagram') {
-    out.push(parseDiagram(args, body, bodyBase, base + start, diags));
+    out.push(parseDiagram(args, body.map(squeeze), bodyBase, base + start, diags));
   } else if (name === 'tabs') {
     out.push(parseTabs(args, body, bodyBase, base + start, diags));
   } else if (name === 'metrics' || name === 'kpi') {
-    out.push(parseMetrics(args, body, bodyBase, base + start, diags));
+    out.push(parseMetrics(args, body.map(squeeze), bodyBase, base + start, diags));
   } else if (name === 'chat' || name === 'dialog') {
     out.push(parseChat(args, body, bodyBase, base + start, diags));
   } else if (name === 'details' || name === 'accordion') {
@@ -417,7 +430,42 @@ function parseCodeFenceMeta(metaStr) {
   return { lang, title, lines, highlights };
 }
 
+const HEADING_PREFIX = /^\s{0,3}(#{1,6})(\s+)/;
+
+/** Équivalent de /^\s{0,3}(#{1,6})\s+(.+?)(?:\s+#+)?\s*$/ : retourne [ligne, dièses, texte] ou null. */
+function headingMatch(l) {
+  const m = HEADING_PREFIX.exec(l);
+  if (!m) return null;
+  const body = l.slice(m[0].length);
+  if (!body) return m[2].length >= 2 ? [l, m[1], m[2].slice(-1)] : null;
+  const isSpace = (c) => c === ' ' || c === '\t' || c === '\f' || c === '\v' || c === ' ' || c === '﻿' || /\s/.test(c);
+  let end = body.length;
+  while (end > 0 && isSpace(body[end - 1])) end--;
+  let hashes = end;
+  while (hashes > 0 && body[hashes - 1] === '#') hashes--;
+  if (hashes < end && hashes > 0 && isSpace(body[hashes - 1])) {
+    let e = hashes;
+    while (e > 0 && isSpace(body[e - 1])) e--;
+    if (e > 0) end = e;
+  }
+  return [l, m[1], body.slice(0, end)];
+}
+
+/** Garde-fou : au-delà de cette profondeur d'imbrication (citations, listes, directives), le contenu est traité comme du texte. */
+const MAX_BLOCK_DEPTH = 256;
+let blockDepth = 0;
+
 function parseBlocks(lines, base, diags) {
+  if (blockDepth >= MAX_BLOCK_DEPTH) {
+    diags.push(diag(base, 'warning', `Imbrication trop profonde (maximum ${MAX_BLOCK_DEPTH} niveaux) : le contenu est traité comme du texte`, 'too-deep'));
+    const text = lines.join('\n').trim();
+    return text ? [{ type: 'paragraph', inline: [{ type: 'text', value: text }], line: base }] : [];
+  }
+  blockDepth++;
+  try { return parseBlocksInner(lines, base, diags); } finally { blockDepth--; }
+}
+
+function parseBlocksInner(lines, base, diags) {
   const out = [];
   let i = 0;
   while (i < lines.length) {
@@ -462,8 +510,9 @@ function parseBlocks(lines, base, diags) {
     }
     if ((m = RE.heading.exec(line))) {
       let text = m[2], id = '';
-      const im = /\s*\{#([A-Za-z0-9_-]+)\}\s*$/.exec(text);
-      if (im) { id = im[1]; text = text.slice(0, im.index); }
+      /* le texte est déjà débarrassé de ses espaces finaux ; pas de "\s*" en tête de motif (quadratique sur les longues suites d'espaces) */
+      const im = /\{#([A-Za-z0-9_-]+)\}$/.exec(text);
+      if (im) { id = im[1]; text = text.slice(0, im.index).trimEnd(); }
       const node = { type: 'heading', level: m[1].length, inline: parseInline(text), line: base + i };
       if (id) node.id = id;
       out.push(node);
@@ -537,7 +586,13 @@ function parseBlocks(lines, base, diags) {
 
 const ESCAPABLE = /[\\`*_{}[\]()#+\-.!|~$>:@]/;
 
-function findClose(text, from, delim) {
+/*
+ * Budget de travail : chaque marqueur inline non fermé (*, **, _, ~~, [, $...) force une recherche jusqu'à la fin du texte,
+ * ce qui est quadratique sur un paragraphe de dizaines de milliers de marqueurs. Chaque recherche est donc débitée d'un
+ * budget partagé par tout le paragraphe ; une fois épuisé, les marqueurs restants sont traités comme du texte brut.
+ * Un texte normal consomme quelques fois sa longueur : le budget (64 x la longueur, au moins 400 000) n'est jamais atteint.
+ */
+function findCloseRaw(text, from, delim) {
   for (let j = from; j < text.length; j++) {
     const c = text[j];
     if (c === '\\') { j++; continue; }
@@ -559,7 +614,14 @@ function findClose(text, from, delim) {
   return -1;
 }
 
-function parseLinkAt(text, i) {
+function findClose(text, from, delim, ctx) {
+  if (ctx.left <= 0) return -1;
+  const r = findCloseRaw(text, from, delim);
+  ctx.left -= (r === -1 ? text.length : r) - from + 1;
+  return r;
+}
+
+function parseLinkAtRaw(text, i) {
   let depth = 0, j = i;
   for (; j < text.length; j++) {
     const c = text[j];
@@ -582,7 +644,14 @@ function parseLinkAt(text, i) {
   return { label: text.slice(i + 1, j), href: tm[1], title: tm[2] || '', end: k + 1 };
 }
 
-function findDollar(text, from) {
+function parseLinkAt(text, i, ctx) {
+  if (ctx.left <= 0) return null;
+  const p = parseLinkAtRaw(text, i);
+  ctx.left -= (p ? p.end : text.length) - i + 1;
+  return p;
+}
+
+function findDollarRaw(text, from) {
   for (let j = from; j < text.length; j++) {
     if (text[j] === '\\') { j++; continue; }
     if (text[j] === '$' && !/\s/.test(text[j - 1]) && !/\d/.test(text[j + 1] || '')) return j;
@@ -590,13 +659,23 @@ function findDollar(text, from) {
   return -1;
 }
 
-function parseInline(text) {
+function findDollar(text, from, ctx) {
+  if (ctx.left <= 0) return -1;
+  const r = findDollarRaw(text, from);
+  ctx.left -= (r === -1 ? text.length : r) - from + 1;
+  return r;
+}
+
+function parseInline(text, ctx) {
+  if (!ctx) ctx = { left: Math.max(400000, text.length * 64) };
+  ctx.left -= text.length;
+  if (ctx.left < 0) return text ? [{ type: 'text', value: text }] : [];
   const out = [];
   let buf = '', i = 0;
   const flush = () => { if (buf) { out.push({ type: 'text', value: buf }); buf = ''; } };
   const wrap = (type, delimLen, end) => {
     flush();
-    out.push({ type, children: parseInline(text.slice(i + delimLen, end)) });
+    out.push({ type, children: parseInline(text.slice(i + delimLen, end), ctx) });
     i = end + delimLen;
   };
 
@@ -615,7 +694,7 @@ function parseInline(text) {
       buf += fence; i += n; continue;
     }
     if (c === '!' && text[i + 1] === '[') {
-      const p = parseLinkAt(text, i + 1);
+      const p = parseLinkAt(text, i + 1, ctx);
       if (p) { flush(); out.push({ type: 'image', alt: p.label, src: p.href, title: p.title }); i = p.end; continue; }
     }
     if (c === '[' && text[i + 1] === '^') {
@@ -623,38 +702,42 @@ function parseInline(text) {
       if (fm) { flush(); out.push({ type: 'footref', id: fm[1] }); i += fm[0].length; continue; }
     }
     if (c === '[') {
-      const p = parseLinkAt(text, i);
-      if (p) { flush(); out.push({ type: 'link', href: p.href, title: p.title, children: parseInline(p.label) }); i = p.end; continue; }
+      const p = parseLinkAt(text, i, ctx);
+      if (p) { flush(); out.push({ type: 'link', href: p.href, title: p.title, children: parseInline(p.label, ctx) }); i = p.end; continue; }
     }
     if (c === '$') {
       if (text[i + 1] === '$') {
-        const e = text.indexOf('$$', i + 2);
+        const e = ctx.left > 0 ? text.indexOf('$$', i + 2) : -1;
+        ctx.left -= (e === -1 ? text.length : e) - i;
         if (e > i + 2) { flush(); out.push({ type: 'math', value: text.slice(i + 2, e).trim() }); i = e + 2; continue; }
       } else if (text[i + 1] && !/\s/.test(text[i + 1])) {
-        const e = findDollar(text, i + 1);
+        const e = findDollar(text, i + 1, ctx);
         if (e !== -1) { flush(); out.push({ type: 'math', value: text.slice(i + 1, e) }); i = e + 1; continue; }
       }
     }
     if (c === 'h' && /^https?:\/\//.test(text.slice(i, i + 8)) && (i === 0 || !/\w/.test(text[i - 1]))) {
+      /* "http://" seul (URL en cours de frappe) n'est pas un lien : on laisse le texte tel quel */
       const m = /^https?:\/\/[^\s<>]+/.exec(text.slice(i));
-      let url = m[0].replace(/[.,;:!?]+$/, '');
-      if (url.endsWith(')') && !url.includes('(')) url = url.slice(0, -1);
-      flush();
-      out.push({ type: 'link', href: url, title: '', children: [{ type: 'text', value: url }] });
-      i += url.length;
-      continue;
+      if (m) {
+        let url = m[0].replace(/[.,;:!?]+$/, '');
+        if (url.endsWith(')') && !url.includes('(')) url = url.slice(0, -1);
+        flush();
+        out.push({ type: 'link', href: url, title: '', children: [{ type: 'text', value: url }] });
+        i += url.length;
+        continue;
+      }
     }
     if (text.startsWith('**', i) && text[i + 2] && !/\s/.test(text[i + 2])) {
-      const e = findClose(text, i + 2, '**');
+      const e = findClose(text, i + 2, '**', ctx);
       if (e !== -1) { wrap('strong', 2, e); continue; }
     }
     if (text.startsWith('~~', i) && text[i + 2] && !/\s/.test(text[i + 2])) {
-      const e = findClose(text, i + 2, '~~');
+      const e = findClose(text, i + 2, '~~', ctx);
       if (e !== -1) { wrap('strike', 2, e); continue; }
     }
     if ((c === '*' || c === '_') && text[i + 1] && !/\s/.test(text[i + 1]) && text[i + 1] !== c &&
         !(c === '_' && /\w/.test(text[i - 1] || ''))) {
-      const e = findClose(text, i + 1, c);
+      const e = findClose(text, i + 1, c, ctx);
       if (e !== -1) { wrap('em', 1, e); continue; }
     }
     if (c === '\n') { flush(); out.push({ type: 'softbreak' }); i++; continue; }
@@ -702,8 +785,11 @@ function checkFootnotes(children, diagnostics) {
   });
 }
 
+/** U+2028 et U+2029 : pas des fins de ligne pour RDTMD, mais "." les exclut dans les expressions régulières. */
+const LINE_SEPARATORS = new RegExp('[' + String.fromCharCode(0x2028, 0x2029) + ']', 'g');
+
 function parse(src) {
-  const lines = String(src).replace(/\r\n?/g, '\n').split('\n');
+  const lines = String(src).replace(/\r\n?/g, '\n').replace(LINE_SEPARATORS, ' ').split('\n');
   const diagnostics = [];
   const children = parseBlocks(lines, 0, diagnostics);
   checkFootnotes(children, diagnostics);
