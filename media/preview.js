@@ -87,7 +87,7 @@
         case 'em': out.push(h('em', {}, inl(n.children))); break;
         case 'strike': out.push(h('del', {}, inl(n.children))); break;
         case 'link': out.push(h('a', { href: safeHref(n.href), title: n.title || null }, inl(n.children))); break;
-        case 'image': out.push(h('img', { src: n.src, alt: n.alt, title: n.title || null })); break;
+        case 'image': out.push(h('img', { src: /^[\s\u0000-\u001f]*(javascript|vbscript):/i.test(n.src) ? null : n.src, alt: n.alt, title: n.title || null })); break;
         case 'footref': {
           const f = footnotes.get(n.id);
           if (!f || !f.inline) { out.push('[^' + n.id + ']'); break; }
@@ -441,15 +441,36 @@
   }
 
   /* ---------- rendu du document ---------- */
-  function renderDoc(ast) {
+  /*
+   * Rendu incrémental : un bloc dont le contenu n'a pas changé (même signature, numéro de ligne exclu) réutilise l'élément DOM du
+   * rendu précédent. Taper dans un document n'en reconstruit plus que le bloc modifié, et l'état d'interface d'un bloc inchangé
+   * (zoom d'un diagramme, onglet actif) est conservé. Les blocs qui dépendent de l'ensemble du document (sommaire, notes de
+   * bas de page) ne sont jamais réutilisés ; tout changement de thème, de palette ou de sauts de ligne vide le cache.
+   */
+  let blockCache = new Map();
+  let cacheKey = '';
+  const signature = (n) => {
+    if (n.type === 'toc' || n.type === 'footnote') return null;
+    const sig = JSON.stringify(n, (k, v) => (k === 'line' ? undefined : v));
+    return sig.indexOf('"footref"') >= 0 ? null : sig;
+  };
+
+  function renderDoc(ast, key) {
     prepare(ast);
+    if (key !== cacheKey) { blockCache = new Map(); cacheKey = key; }
+    const prev = blockCache, next = new Map();
     const els = [];
     (ast.children || []).forEach((n) => {
-      const el = block(n);
+      const sig = signature(n);
+      let el = null;
+      if (sig !== null) { const q = prev.get(sig); if (q && q.length) el = q.shift(); }
+      if (!el) el = block(n);
       if (!el) return;
+      if (sig !== null) { if (!next.has(sig)) next.set(sig, []); next.get(sig).push(el); }
       if (typeof n.line === 'number' && n.type !== 'included' && n.type !== 'includelink' && el.setAttribute) el.setAttribute('data-line', String(n.line));
       els.push(el);
     });
+    blockCache = next;
     const fn = renderFootnotes();
     if (fn) els.push(fn);
     const y = window.scrollY;
@@ -523,7 +544,7 @@
       syncOn = m.syncScroll !== false;
       applyTheme(m.theme);
       K.setPalette(m.palette);
-      renderDoc(m.ast);
+      renderDoc(m.ast, [m.theme || 'auto', breaks, JSON.stringify(m.palette || null), navigator.language].join('|'));
     } else if (m.type === 'scrollTo' && syncOn) {
       scrollToLine(m.line);
     }

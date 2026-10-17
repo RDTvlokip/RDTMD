@@ -1,6 +1,7 @@
 test.js
 test-v11.js
 test-ext.js
+test-fuzz.js
 example/**
 .vscode/**
 .github/**

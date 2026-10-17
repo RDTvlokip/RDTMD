@@ -14,7 +14,7 @@
   "keywords": ["rdtmd", "markup", "diagram", "gantt", "flowchart", "sequence diagram", "chart", "math", "markdown"],
   "main": "./src/extension.js",
   "activationEvents": [],
-  "scripts": { "test": "node test.js && node test-v11.js && node test-ext.js" },
+  "scripts": { "test": "node test.js && node test-v11.js && node test-ext.js && node test-fuzz.js" },
   "contributes": {
     "languages": [
       {
