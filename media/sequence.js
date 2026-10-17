@@ -174,7 +174,17 @@
     /* ---------- cadre ---------- */
     const allX = px.map((x, i) => [x - boxW[i] / 2, x + boxW[i] / 2]).flat();
     laid.forEach((l) => { if (l.x0 !== undefined) allX.push(l.x0, l.x1); });
-    frames.forEach((f) => { if (f.xmin !== Infinity) allX.push(f.xmin - (12 + 9 * f.depth), f.xmax + 12 + 9 * f.depth); });
+    /* largeur minimale d'un cadre : son onglet, son libellé et ceux de ses branches else/and doivent tenir dedans */
+    const frameNeed = (f) => {
+      let w = textW(f.kind, 11.5, 700) + 16 + 8 + (f.label ? textW('[' + f.label + ']', 12) : 0) + 14;
+      f.dividers.forEach((d) => { if (d.label) w = Math.max(w, 8 + textW('[' + d.label + ']', 12) + 14); });
+      return w;
+    };
+    frames.forEach((f) => {
+      if (f.xmin === Infinity) return;
+      const pad = 12 + 9 * f.depth, x0 = f.xmin - pad;
+      allX.push(x0, Math.max(f.xmax + pad, x0 + frameNeed(f)));
+    });
     const rightExtra = rightPad > 0 ? rightPad + boxW[last] / 2 : 0;
     allX.push(px[last] + boxW[last] / 2 + rightExtra);
     const PAD = 22;
@@ -195,7 +205,7 @@
     frames.forEach((f) => {
       if (f.xmin === Infinity) { f.xmin = px[0]; f.xmax = px[last]; }
       const pad = 12 + 9 * f.depth;
-      const x0 = f.xmin - pad, w = f.xmax - f.xmin + pad * 2;
+      const x0 = f.xmin - pad, w = Math.max(f.xmax - f.xmin + pad * 2, frameNeed(f));
       svg.append(s('rect', { x: x0, y: f.y0, width: w, height: f.y1 - f.y0, rx: 4, class: 'seq-frame' }));
       const tabW = textW(f.kind, 11.5, 700) + 16;
       svg.append(s('path', { d: 'M ' + x0 + ' ' + f.y0 + ' h ' + tabW + ' v 14 l -6 6 h ' + (-tabW + 6) + ' z', class: 'seq-frame-tab' }));

@@ -169,8 +169,24 @@
 
     const FS = 12.5;
     /* tous les points d'abord : une étiquette ne doit recouvrir ni les autres étiquettes ni les points à venir */
+    /* index spatial : sans lui, 5 000 points coûtaient des centaines de millions de comparaisons */
+    const CELL = 48, grid = new Map();
+    const keysOf = (r) => {
+      const ks = [];
+      for (let cx = Math.floor(r.x / CELL); cx <= Math.floor((r.x + r.w) / CELL); cx++) for (let cy = Math.floor(r.y / CELL); cy <= Math.floor((r.y + r.h) / CELL); cy++) ks.push(cx + ',' + cy);
+      return ks;
+    };
+    const addPlaced = (r) => keysOf(r).forEach((k) => { let a = grid.get(k); if (!a) grid.set(k, a = []); a.push(r); });
     const placed = pts.map((p) => ({ x: X0 + p.x * SIZE - 8, y: Y0 + (1 - p.y) * SIZE - 8, w: 16, h: 16 }));
-    const overlap = (box) => placed.reduce((a, r) => a + (rectsHit(box, r, 1) ? 1 : 0), 0);
+    placed.forEach(addPlaced);
+    const overlap = (box) => {
+      const seen = new Set();
+      for (const k of keysOf(box)) {
+        const a = grid.get(k);
+        if (a) for (const r of a) if (!seen.has(r) && rectsHit(box, r, 1)) { seen.add(r); if (seen.size >= 3) return seen.size; }
+      }
+      return seen.size;
+    };
     const inPlot = (b) => b.x >= X0 - 2 && b.x + b.w <= X0 + SIZE + 2 && b.y >= Y0 - 2 && b.y + b.h <= Y0 + SIZE + 2;
     pts.forEach((p) => {
       const px = X0 + p.x * SIZE, py = Y0 + (1 - p.y) * SIZE;
@@ -195,7 +211,7 @@
         if (cost < bestCost) { best = { c, box }; bestCost = cost; }
         if (!cost) break;
       }
-      placed.push(best.box);
+      addPlaced(best.box);
       const g = s('g', { class: 'quad-point', 'data-id': p.name });
       g.append(s('circle', { cx: px, cy: py, r: 7, fill: col, class: 'quad-dot' }));
       const tx = best.c.a === 'start' ? best.box.x + 4 : best.c.a === 'end' ? best.box.x + w - 4 : best.box.x + w / 2;

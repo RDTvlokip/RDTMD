@@ -109,4 +109,19 @@ assert.strictEqual(findBrowser('Z:\\nope\\x.exe', { PATH: '' }, 'linux'), null);
   assert.strictEqual(fixed(':::note A\nx\n:::note B\ny\n:::\n', (d) => d.code === 'unclosed' && d.line === 0), ':::note A\nx\n:::\n:::note B\ny\n:::\n');
 }
 
+/* ---------- svgkit : ellipsize ne coupe jamais une paire de substitution (le navigateur plantait dessus) ---------- */
+{
+  const fakeDoc = { createElement: () => ({ getContext: () => null }), createElementNS: () => ({}), body: {} };
+  const win = {};
+  new Function('window', 'document', 'getComputedStyle', fs.readFileSync(path.join(mediaDir, 'svgkit.js'), 'utf8'))(win, fakeDoc, () => ({ fontFamily: 'sans-serif' }));
+  const K = win.RDTKit;
+  const samples = ['ab🦀cd', '🦀🦀🦀🦀🦀🦀', 'x'.repeat(5) + '😀' + 'y'.repeat(5), 'مرحبا 🦀 你好 🦀 données'];
+  samples.forEach((str) => {
+    for (let maxW = 0; maxW <= 120; maxW += 3) {
+      const r = K.ellipsize(str, maxW, 12.5);
+      assert(!/[\ud800-\udbff](?![\udc00-\udfff])/.test(r) && !/(?<![\ud800-\udbff])[\udc00-\udfff]/.test(r), 'chaîne UTF-16 invalide : ' + JSON.stringify(r));
+    }
+  });
+}
+
 console.log('TESTS EXTENSION : OK');

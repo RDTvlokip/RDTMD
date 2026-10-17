@@ -77,6 +77,9 @@
       const mid = Math.ceil((lo + hi) / 2);
       if (textW(str.slice(0, mid) + '…', px, weight) <= maxW) lo = mid; else hi = mid - 1;
     }
+    /* ne jamais couper une paire de substitution (emoji) : une moitié seule fait planter certains moteurs de rendu de texte */
+    const c = lo > 0 ? str.charCodeAt(lo - 1) : 0;
+    if (c >= 0xd800 && c <= 0xdbff) lo--;
     return str.slice(0, lo) + '…';
   }
 

@@ -17,14 +17,23 @@ All notable changes to the **RDTMD** project are documented in this file.
 - **Preview themes and palette**: `rdtmd.theme` (`auto`, `light`, `dark`, `paper`, `contrast`) and `rdtmd.palette`. Print stylesheet for clean paper output.
 - **Editor**: completion (directives, chart/diagram types, options, block keywords), 24 snippets (`rdt-...`), quick fixes (misspelled kinds and options, chart series length, missing `:::`, `end` and footnote definitions, stray `end`), folding of `:::` blocks, synchronized scrolling between the editor and the preview (`rdtmd.syncScroll`), and syntax highlighting for the new constructs.
 - Diagnostics now carry a machine-readable `code` and `data`, and suggest the closest valid name ("did you mean").
-- New example `example/demo.rdtmd` covering the whole language, and new tests (`test-v11.js`, `test-ext.js`).
+- New example `example/demo.rdtmd` covering the whole language, and new tests (`test-v11.js`, `test-ext.js`, and `test-fuzz.js`, a deterministic fuzz suite that runs with `npm test`).
 
 ### Changed
+- The preview re-renders incrementally: blocks whose content did not change keep their DOM element, so typing in a large document only rebuilds what changed (a document full of diagrams re-renders about 5 times faster) and zoom or active-tab state survives edits.
 - The preview renderer is split into small modules (`svgkit`, `charts`, `graph`, `sequence`, `timeline`, `misc`, `interact`); the list of files is shared by the preview, the HTML export and the tests (`src/assets.js`).
 - Diagram markers get unique ids, so arrowheads still render in tabs and collapsed sections.
 - Unknown chart and diagram options are reported with a "did you mean" suggestion, and invalid `@theme`, `@width` and `@align` values are flagged.
 
 ### Fixed
+- **Robustness (found by fuzzing and stress tests)**:
+  - Typing a bare `http://` made the parser throw, which stopped the live preview and the diagnostics until the line was completed.
+  - The characters U+2028 and U+2029 broke several line patterns and could throw.
+  - Unclosed inline markers (`*`, `**`, `_`, `~~`, `[`, `![`, `$`) were quadratic: a paragraph with 20 000 of them took 8 to more than 30 seconds. Each paragraph now has a bounded work budget (a normal text never reaches it).
+  - Headings, chart, diagram and metrics lines containing very long runs of spaces were quadratic; fixed.
+  - Very deep nesting (quotes, lists, directives) overflowed the stack. Block nesting is capped at 256 levels and mindmaps at 100, with a `too-deep` diagnostic; deeper content is kept as text.
+- **Rendering**: labels on dense flowcharts, state, ER and class diagrams no longer land on nodes or on each other as often (spatial index, offset candidates; from 30 % of random figures with a collision to about 5 %); Gantt tick labels, rotated chart axis labels and quadrant labels no longer overflow the figure; stacked back-edge labels in top-to-bottom flows no longer overlap; long chart categories are truncated with a tooltip and crowded axes show one label out of N; `javascript:` image sources are dropped.
+- **Quick fixes**: closing an unclosed block now inserts `:::` before the next block (it was closing the wrong one when several were nested by mistake), and a footnote definition is added right after the paragraph that cites it (after the block when the citation is inside a chat).
 - A flowchart line such as `Input -> Processor -> Storage` created a single node named "Processor -> Storage"; it now creates two edges.
 - Back edges of a left-to-right flowchart no longer cross the nodes of their column when they can pass below.
 - In class diagrams, parents and owners are placed above their children.

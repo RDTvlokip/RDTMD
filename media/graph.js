@@ -238,11 +238,16 @@
       return keys;
     };
     const addRect = (r) => cellsOf(r).forEach((k) => { let a = grid.get(k); if (!a) grid.set(k, a = []); a.push(r); });
-    const countHits = (box) => {
+    /* arrêt dès `limit` collisions : sur des milliers d'étiquettes empilées au même endroit, inutile de toutes les compter */
+    const countHits = (box, limit) => {
       const seen = new Set();
       for (const k of cellsOf(box)) {
         const a = grid.get(k);
-        if (a) for (const r of a) if (!seen.has(r) && rectsHit(box, r, 3)) seen.add(r);
+        if (a) {
+          for (const r of a) {
+            if (!seen.has(r) && rectsHit(box, r, 3)) { seen.add(r); if (seen.size >= limit) return seen.size; }
+          }
+        }
       }
       return seen.size;
     };
@@ -266,7 +271,7 @@
           const side = !isLR && !g.back ? Math.sign(g.p[3][0] - g.p[0][0]) * (Math.abs(g.p[3][0] - g.p[0][0]) > 20 ? 1 : 0) : 0;
           box = { x: side > 0 ? x + 8 : side < 0 ? x - 8 - w : x - w / 2, y: y - LBL_H / 2, w, h: LBL_H };
         }
-        const cost = countHits(box);
+        const cost = countHits(box, 3);
         if (cost < bestCost) { best = box; bestCost = cost; }
         if (!cost) break;
       }
