@@ -93,7 +93,8 @@ function fixesFor(d, lines) {
     case 'unclosed-group':
     case 'unclosed-block': {
       let close = -1;
-      for (let i = line + 1; i < lines.length; i++) if (/^:{3,}\s*$/.test(lines[i])) { close = i; break; }
+      /* avant la prochaine ligne ":::" (ouverture ou fermeture) : le diagramme finit au plus tard là */
+      for (let i = line + 1; i < lines.length; i++) if (/^:{3,}/.test(lines[i])) { close = i; break; }
       if (close < 0) close = lines.length;
       const indent = /^\s*/.exec(lines[line] || '')[0];
       out.push({ title: 'Ajouter "end" avant la fin du diagramme', edits: [{ type: 'insert', line: close, col: 0, text: indent + 'end\n' }] });
