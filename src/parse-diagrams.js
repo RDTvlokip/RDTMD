@@ -374,9 +374,11 @@ function parseSequence(title, body, bodyBase, line, diags) {
 
 const COLOR_SUFFIX = /\s*\{(#[0-9a-f]{3,8}|[a-z]{3,20})\}\s*$/i;
 
+const MAX_MINDMAP_DEPTH = 100;
+
 function parseMindmap(title, body, bodyBase, line, diags) {
   const opts = {};
-  let root = null;
+  let root = null, tooDeep = false;
   const stack = [];
 
   body.forEach((l, k) => {
@@ -395,6 +397,11 @@ function parseMindmap(title, body, bodyBase, line, diags) {
 
     if (!root) { root = node; stack.push({ depth, node }); return; }
     while (stack.length > 0 && stack[stack.length - 1].depth >= depth) stack.pop();
+    /* profondeur plafonnée : un arbre de milliers de niveaux ferait déborder la pile (JSON, rendu) */
+    if (stack.length >= MAX_MINDMAP_DEPTH) {
+      stack.length = MAX_MINDMAP_DEPTH - 1;
+      if (!tooDeep) { tooDeep = true; diags.push(diag(ln, 'warning', `Mindmap trop profonde (maximum ${MAX_MINDMAP_DEPTH} niveaux) : les niveaux suivants sont rattachés au niveau ${MAX_MINDMAP_DEPTH - 1}`, 'too-deep')); }
+    }
     if (stack.length > 0) stack[stack.length - 1].node.children.push(node);
     else root.children.push(node);
     stack.push({ depth, node });

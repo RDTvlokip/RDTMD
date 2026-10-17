@@ -6,6 +6,33 @@
  *        | { type: 'deleteLine', line } | { type: 'append', text }
  */
 
+/** Blocs dont le contenu n'est pas du Markdown de blocs : une définition de note n'y serait pas reconnue. */
+const TEXT_ONLY_BLOCKS = new Set(['chat', 'dialog', 'metrics', 'kpi', 'chart', 'diagram']);
+
+/** Directive ouverte la plus proche au-dessus de la ligne (les fermetures rencontrées sont comptées). */
+function enclosingBlock(lines, line) {
+  let depth = 0;
+  for (let i = Math.min(line, lines.length) - 1; i >= 0; i--) {
+    const l = lines[i];
+    if (/^:{3,}\s*$/.test(l)) { depth++; continue; }
+    const m = /^(:{3,})\s*([A-Za-z]+)\b/.exec(l);
+    if (!m) continue;
+    if (depth === 0) return { name: m[2].toLowerCase(), fence: m[1].length, line: i };
+    depth--;
+  }
+  return null;
+}
+
+/** Ligne de fermeture du bloc ouvert à `from`, ou -1. */
+function closeOf(lines, from, fence) {
+  const close = new RegExp('^:{' + fence + ',}\\s*$'), open = new RegExp('^:{' + fence + ',}\\s*[A-Za-z]');
+  let depth = 1;
+  for (let i = from + 1; i < lines.length; i++) {
+    if (close.test(lines[i])) { if (--depth === 0) return i; } else if (open.test(lines[i])) depth++;
+  }
+  return -1;
+}
+
 /** Remplace le mot capturé en groupe 2 (le groupe 1 est le préfixe qui le précède). */
 const replaceWord = (lines, line, re, text) => {
   const src = lines[line];
@@ -54,7 +81,13 @@ function fixesFor(d, lines) {
       break;
     }
     case 'unclosed': {
-      out.push({ title: 'Ajouter ":::" de fermeture à la fin du document', edits: [{ type: 'append', text: ':'.repeat(Math.max(3, data.fence || 3)) }] });
+      const fence = Math.max(3, data.fence || 3);
+      /* le plus souvent la fermeture manque juste avant le bloc suivant, qui a été avalé comme bloc imbriqué */
+      const opener = new RegExp('^:{' + fence + ',}\\s*[A-Za-z]');
+      let at = -1;
+      for (let i = line + 1; i < lines.length; i++) if (opener.test(lines[i])) { at = i; break; }
+      if (at >= 0) out.push({ title: 'Ajouter ":::" de fermeture avant le bloc suivant', edits: [{ type: 'insert', line: at, col: 0, text: ':'.repeat(fence) + '\n' }] });
+      else out.push({ title: 'Ajouter ":::" de fermeture à la fin du document', edits: [{ type: 'append', text: ':'.repeat(fence) }] });
       break;
     }
     case 'unclosed-group':
@@ -72,7 +105,19 @@ function fixesFor(d, lines) {
       break;
     }
     case 'footnote-missing': {
-      out.push({ title: `Ajouter la définition [^${data.id}]`, edits: [{ type: 'append', text: `[^${data.id}]: ` }] });
+      /* une note citée dans un message de chat ne peut pas être définie dans le bloc : on la place après sa fermeture */
+      const enc = enclosingBlock(lines, line);
+      if (enc && TEXT_ONLY_BLOCKS.has(enc.name)) {
+        const close = closeOf(lines, enc.line, enc.fence);
+        /* bloc non fermé : on ne propose rien ici, le correctif "fermer le bloc" doit passer d'abord */
+        if (close >= 0) out.push({ title: `Ajouter la définition [^${data.id}]`, edits: [{ type: 'insert', line: close + 1, col: 0, text: `\n[^${data.id}]: \n` }] });
+        break;
+      }
+      /* juste après le paragraphe qui cite la note : toujours dans le même bloc, donc toujours reconnue */
+      let end = Math.min(line, lines.length - 1);
+      const startsBlock = /^(:{3,}|\[\^|#{1,6}\s|`{3,}|~{3,}|@|>|\s*[-*+]\s|\s*\d+[.)]\s|\||\$\$)/;
+      while (end + 1 < lines.length && lines[end + 1].trim() !== '' && !startsBlock.test(lines[end + 1])) end++;
+      out.push({ title: `Ajouter la définition [^${data.id}]`, edits: [{ type: 'insert', line: end + 1, col: 0, text: `\n[^${data.id}]: \n` }] });
       break;
     }
     default:

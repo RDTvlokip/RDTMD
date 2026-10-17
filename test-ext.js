@@ -102,7 +102,11 @@ assert.strictEqual(findBrowser('Z:\\nope\\x.exe', { PATH: '' }, 'linux'), null);
   assert.strictEqual(fixed(':::note Titre\ntexte\n', (d) => d.code === 'unclosed'), ':::note Titre\ntexte\n:::\n'.replace(/\n$/, '\n'), 'fermeture ajoutée');
   assert.strictEqual(fixed(':::diagram flow\ngroup X\nA -> B\n:::\n', (d) => d.code === 'unclosed-group'), ':::diagram flow\ngroup X\nA -> B\nend\n:::\n');
   assert.strictEqual(fixed(':::diagram sequence\nA -> B\nend\n:::\n', (d) => d.code === 'stray-end'), ':::diagram sequence\nA -> B\n:::\n');
-  assert.strictEqual(fixed('Texte[^n].\n', (d) => d.code === 'footnote-missing'), 'Texte[^n].\n[^n]: \n');
+  assert.strictEqual(fixed('Texte[^n].\n', (d) => d.code === 'footnote-missing'), 'Texte[^n].\n\n[^n]: \n');
+  // la définition suit le paragraphe qui cite la note, pas la fin du document
+  assert.strictEqual(fixed('Un[^a] texte\nsuite\n\n## Titre\n', (d) => d.code === 'footnote-missing'), 'Un[^a] texte\nsuite\n\n[^a]: \n\n## Titre\n');
+  // fermeture d'un bloc non fermé : avant le bloc suivant
+  assert.strictEqual(fixed(':::note A\nx\n:::note B\ny\n:::\n', (d) => d.code === 'unclosed' && d.line === 0), ':::note A\nx\n:::\n:::note B\ny\n:::\n');
 }
 
 console.log('TESTS EXTENSION : OK');
