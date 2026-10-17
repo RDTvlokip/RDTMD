@@ -1,0 +1,122 @@
+{
+  "Chart: bar": {
+    "prefix": ["chart-bar", "rdt-bar"],
+    "description": "Bar chart",
+    "body": [":::chart bar \"${1:Title}\"", "@unit ${2:unit}", "x: ${3:A}, ${4:B}, ${5:C}", "${6:Series}: ${7:1}, ${8:2}, ${9:3}", ":::"]
+  },
+  "Chart: stacked bar": {
+    "prefix": ["chart-stack", "rdt-stack"],
+    "description": "Stacked bar chart",
+    "body": [":::chart bar \"${1:Title}\"", "@stack", "x: ${2:A}, ${3:B}, ${4:C}", "${5:First}: ${6:1}, ${7:2}, ${8:3}", "${9:Second}: ${10:3}, ${11:2}, ${12:1}", ":::"]
+  },
+  "Chart: horizontal bar": {
+    "prefix": ["chart-hbar", "rdt-hbar"],
+    "description": "Horizontal bar chart",
+    "body": [":::chart bar \"${1:Title}\"", "@horizontal", "${2:Alpha}: ${3:10}", "${4:Beta}: ${5:20}", ":::"]
+  },
+  "Chart: line": {
+    "prefix": ["chart-line", "rdt-line"],
+    "description": "Line chart",
+    "body": [":::chart line \"${1:Title}\"", "x: ${2:Jan}, ${3:Feb}, ${4:Mar}", "${5:Series}: ${6:1}, ${7:2}, ${8:3}", ":::"]
+  },
+  "Chart: bar and line with right axis": {
+    "prefix": ["chart-combo", "rdt-combo"],
+    "description": "Bars on the left axis, a line on the right axis",
+    "body": [":::chart bar \"${1:Title}\"", "@unit ${2:Requests}", "@unit2 ${3:ms}", "@y2 ${4:Latency}", "x: ${5:Mon}, ${6:Tue}, ${7:Wed}", "${8:Requests}: ${9:120}, ${10:180}, ${11:150}", "${4:Latency}: ${12:42}, ${13:55}, ${14:48}", ":::"]
+  },
+  "Chart: area": {
+    "prefix": ["chart-area", "rdt-area"],
+    "description": "Stacked area chart",
+    "body": [":::chart area \"${1:Title}\"", "@stack", "x: ${2:Q1}, ${3:Q2}, ${4:Q3}", "${5:A}: ${6:1}, ${7:2}, ${8:3}", "${9:B}: ${10:2}, ${11:1}, ${12:2}", ":::"]
+  },
+  "Chart: scatter": {
+    "prefix": ["chart-scatter", "rdt-scatter"],
+    "description": "Scatter plot",
+    "body": [":::chart scatter \"${1:Title}\"", "@xlabel ${2:X}", "@ylabel ${3:Y}", "${4:Series}: (${5:1}, ${6:2}) (${7:2}, ${8:3.5}) (${9:3}, ${10:4})", ":::"]
+  },
+  "Chart: donut": {
+    "prefix": ["chart-donut", "rdt-donut"],
+    "description": "Donut chart",
+    "body": [":::chart donut \"${1:Title}\"", "@center ${2:100 %}", "${3:A}: ${4:60}", "${5:B}: ${6:40}", ":::"]
+  },
+  "Diagram: flow": {
+    "prefix": ["diagram-flow", "rdt-flow"],
+    "description": "Flowchart with node shapes",
+    "body": [":::diagram flow \"${1:Title}\"", "@dir ${2|LR,TD|}", "${3:Start}((${4:Begin})) -> ${5:Check}{${6:Ok?}}", "${5:Check} -> ${7:Done}(${8:Done}) : ${9:yes}", "${5:Check} --> ${3:Start} : ${10:no}", ":::"]
+  },
+  "Diagram: flow with groups": {
+    "prefix": ["diagram-group", "rdt-group"],
+    "description": "Flowchart with named groups",
+    "body": [":::diagram flow \"${1:Title}\"", "group ${2:Frontend}", "${3:UI} -> ${4:Router}", "end", "group ${5:Backend}", "${6:API} -> ${7:Db}[(${8:Database})]", "end", "${4:Router} -> ${6:API}", ":::"]
+  },
+  "Diagram: state": {
+    "prefix": ["diagram-state", "rdt-state"],
+    "description": "State machine",
+    "body": [":::diagram state \"${1:Title}\"", "[*] -> ${2:Idle}", "${2:Idle} -> ${3:Running} : ${4:start}", "${3:Running} -> ${2:Idle} : ${5:stop}", "${3:Running} -> [*]", ":::"]
+  },
+  "Diagram: sequence": {
+    "prefix": ["diagram-seq", "rdt-seq"],
+    "description": "Sequence diagram",
+    "body": [":::diagram sequence \"${1:Title}\"", "@autonumber", "${2:Client} -> ${3:Server} : ${4:request}", "activate ${3:Server}", "${3:Server} --> ${2:Client} : ${5:response}", "deactivate ${3:Server}", ":::"]
+  },
+  "Diagram: sequence alt block": {
+    "prefix": ["seq-alt", "rdt-alt"],
+    "description": "alt / else block in a sequence diagram",
+    "body": ["alt ${1:condition}", "  ${2:A} -> ${3:B} : ${4:yes}", "else ${5:otherwise}", "  ${2:A} -> ${3:B} : ${6:no}", "end"]
+  },
+  "Diagram: mindmap": {
+    "prefix": ["diagram-mindmap", "rdt-mindmap"],
+    "description": "Mind map (2 spaces per level, optional {color})",
+    "body": [":::diagram mindmap \"${1:Title}\"", "${2:Root}", "  ${3:Branch} {${4:#4e9de6}}", "    ${5:Leaf}", "  ${6:Branch 2}", ":::"]
+  },
+  "Diagram: timeline": {
+    "prefix": ["diagram-timeline", "rdt-timeline"],
+    "description": "Timeline with sections",
+    "body": [":::diagram timeline \"${1:Title}\"", "@orient ${2|horizontal,vertical|}", "section ${3:Phase 1}", "${4:2024}: ${5:Event} | ${6:Other event}", "section ${7:Phase 2}", "${8:2025}: ${9:Event}", ":::"]
+  },
+  "Diagram: gantt": {
+    "prefix": ["diagram-gantt", "rdt-gantt"],
+    "description": "Gantt chart",
+    "body": [":::diagram gantt \"${1:Title}\"", "@today", "section ${2:Design}", "${3:Spec}: done, ${4:2026-10-01}, ${5:5d}", "${6:Mockups}: after ${3:Spec}, ${7:4d}", "section ${8:Build}", "${9:Parser}: active, ${10:2026-10-08}, ${11:2w}", "${12:Release}: milestone, after ${9:Parser}", ":::"]
+  },
+  "Diagram: quadrant": {
+    "prefix": ["diagram-quadrant", "rdt-quadrant"],
+    "description": "Four-quadrant matrix",
+    "body": [":::diagram quadrant \"${1:Title}\"", "@x ${2:Effort}: ${3:Low} -> ${4:High}", "@y ${5:Impact}: ${6:Low} -> ${7:High}", "@quadrants ${8:Plan} | ${9:Major} | ${10:Quick wins} | ${11:Avoid}", "${12:Item}: ${13:0.3}, ${14:0.8}", ":::"]
+  },
+  "Diagram: er": {
+    "prefix": ["diagram-er", "rdt-er"],
+    "description": "Entity-relationship diagram",
+    "body": [":::diagram er \"${1:Title}\"", "entity ${2:User}", "  id: int PK", "  ${3:name}: text", "entity ${4:Post}", "  id: int PK", "  user_id: int FK", "${2:User} 1--0..* ${4:Post} : ${5:writes}", ":::"]
+  },
+  "Diagram: class": {
+    "prefix": ["diagram-class", "rdt-class"],
+    "description": "Class diagram",
+    "body": [":::diagram class \"${1:Title}\"", "class ${2:Animal} <<abstract>>", "  +${3:name}: string", "  +${4:speak}()", "class ${5:Dog}", "${5:Dog} --|> ${2:Animal}", ":::"]
+  },
+  "Tabs": {
+    "prefix": ["tabs", "rdt-tabs"],
+    "description": "Tabbed block",
+    "body": [":::tabs", "=== ${1:First}", "${2:content}", "=== ${3:Second}", "${4:content}", ":::"]
+  },
+  "Metrics": {
+    "prefix": ["metrics", "rdt-metrics"],
+    "description": "Metric cards",
+    "body": [":::metrics \"${1:Title}\"", "${2:Latency}: ${3:42 ms} (${4:-5 ms, good})", "${5:Throughput}: ${6:1200 req/s} (${7:+8%, good})", ":::"]
+  },
+  "Details": {
+    "prefix": ["details", "rdt-details"],
+    "description": "Collapsible block",
+    "body": [":::details \"${1:Title}\"", "${2:content}", ":::"]
+  },
+  "Table of contents": {
+    "prefix": ["toc", "rdt-toc"],
+    "description": "Table of contents built from the headings",
+    "body": ["@toc ${1|3,1,2,4,5,6|}"]
+  },
+  "Footnote": {
+    "prefix": ["footnote", "rdt-fn"],
+    "description": "Footnote reference and its definition",
+    "body": ["${1:Text}[^${2:1}]", "", "[^${2:1}]: ${3:Note text}"]
+  }
+}

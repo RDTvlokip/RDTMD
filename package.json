@@ -1,8 +1,8 @@
 {
   "name": "rdtmd",
   "displayName": "RDTMD",
-  "description": "RDTMD technical markup language (.rdtmd): zero-dependency parser from scratch, live preview, native math, charts, and diagrams.",
-  "version": "1.0.3",
+  "description": "RDTMD technical markup language (.rdtmd): zero-dependency parser from scratch, live preview, native math, charts, nine diagram types, HTML/PDF export.",
+  "version": "1.1.0",
   "publisher": "rdtvlokip",
   "repository": {
     "type": "git",
@@ -10,10 +10,11 @@
   },
   "license": "MIT",
   "engines": { "vscode": "^1.80.0" },
-  "categories": ["Programming Languages"],
+  "categories": ["Programming Languages", "Visualization", "Snippets"],
+  "keywords": ["rdtmd", "markup", "diagram", "gantt", "flowchart", "sequence diagram", "chart", "math", "markdown"],
   "main": "./src/extension.js",
   "activationEvents": [],
-  "scripts": { "test": "node test.js && node test-v11.js" },
+  "scripts": { "test": "node test.js && node test-v11.js && node test-ext.js" },
   "contributes": {
     "languages": [
       {
@@ -30,6 +31,9 @@
         "path": "./syntaxes/rdtmd.tmLanguage.json"
       }
     ],
+    "snippets": [
+      { "language": "rdtmd", "path": "./snippets/rdtmd.json" }
+    ],
     "configuration": {
       "title": "RDTMD",
       "properties": {
@@ -41,17 +45,50 @@
         "rdtmd.inlineIncludes": {
           "type": "boolean",
           "default": false,
-          "description": "Embed the content of @include files directly into the preview. When disabled, displays a clickable navigation chip to open the target file."
+          "description": "Embed the content of @include files directly into the preview. When disabled, displays a clickable navigation chip to open the target file. Exports always embed includes."
+        },
+        "rdtmd.theme": {
+          "type": "string",
+          "enum": ["auto", "light", "dark", "paper", "contrast"],
+          "enumDescriptions": [
+            "Follow the VS Code color theme.",
+            "Always use a light preview.",
+            "Always use a dark preview.",
+            "Warm paper tones, easy on the eyes and good for printing.",
+            "High contrast on black."
+          ],
+          "default": "auto",
+          "description": "Color theme of the preview and of HTML exports."
+        },
+        "rdtmd.palette": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$" },
+          "default": [],
+          "markdownDescription": "Colors used by charts and diagrams, as hex values (for example `[\"#4e9de6\", \"#e6794e\", \"#5cc08a\"]`). At least two colors are needed; leave empty for the default palette. A block can override it with `@theme`."
+        },
+        "rdtmd.syncScroll": {
+          "type": "boolean",
+          "default": true,
+          "description": "Keep the editor and the preview scrolled to the same place."
+        },
+        "rdtmd.browserPath": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Path to a Chromium-based browser (Edge, Chrome, Chromium, Brave) used by **RDTMD: Export as PDF**. Leave empty to auto-detect."
         }
       }
     },
     "commands": [
       { "command": "rdtmd.preview", "title": "RDTMD: Open Preview", "icon": "$(open-preview)" },
-      { "command": "rdtmd.showAst", "title": "RDTMD: Show AST (JSON)" }
+      { "command": "rdtmd.showAst", "title": "RDTMD: Show AST (JSON)" },
+      { "command": "rdtmd.exportHtml", "title": "RDTMD: Export as HTML" },
+      { "command": "rdtmd.exportPdf", "title": "RDTMD: Export as PDF" }
     ],
     "menus": {
       "editor/title": [
-        { "command": "rdtmd.preview", "when": "resourceLangId == rdtmd", "group": "navigation" }
+        { "command": "rdtmd.preview", "when": "resourceLangId == rdtmd", "group": "navigation" },
+        { "command": "rdtmd.exportHtml", "when": "resourceLangId == rdtmd", "group": "1_export@1" },
+        { "command": "rdtmd.exportPdf", "when": "resourceLangId == rdtmd", "group": "1_export@2" }
       ]
     }
   }

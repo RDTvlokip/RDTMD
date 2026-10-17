@@ -8,7 +8,7 @@ const optHint = (name, known) => {
   return hint ? ` — vouliez-vous dire "@${hint}" ?` : '';
 };
 const unknownOpt = (name, ln, diags, known) =>
-  diags.push(diag(ln, 'warning', `Option inconnue "@${name}"${optHint(name.toLowerCase(), known)}`, 'unknown-option', { got: name }));
+  diags.push(diag(ln, 'warning', `Option inconnue "@${name}"${optHint(name.toLowerCase(), known)}`, 'unknown-option', { got: name, hint: closest(name.toLowerCase(), known) }));
 
 const COMMON = ['theme', 'width', 'align'];
 
