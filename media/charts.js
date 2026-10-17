@@ -64,7 +64,8 @@
       fig.append(h('div', { class: 'legend' }, n.series.map((se, i) => {
         const sw = h('span', { class: 'sw' });
         sw.style.background = pal[i % pal.length];
-        return h('span', { class: 'legend-item' }, [sw, se.name + (se.axis === 'y2' ? ' (axe droit)' : '')]);
+        const fr = typeof navigator !== 'undefined' && /^fr/i.test(navigator.language || '');
+        return h('span', { class: 'legend-item' }, [sw, se.name + (se.axis === 'y2' ? (fr ? ' (axe droit)' : ' (right axis)') : '')]);
       })));
     }
     return fig;
