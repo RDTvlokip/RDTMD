@@ -136,7 +136,8 @@
   function renderQuadrant(n) {
     const pts = n.points || [];
     const pal = palette(n);
-    const SIZE = 420, X0 = 78, Y0 = 34, W = X0 + SIZE + 30, H = Y0 + SIZE + 64;
+    /* le plan grandit avec le nombre de points pour que les étiquettes aient la place de se poser */
+    const SIZE = Math.min(660, 420 + Math.max(0, pts.length - 8) * 16), X0 = 78, Y0 = 34, W = X0 + SIZE + 30, H = Y0 + SIZE + 64;
     const svg = s('svg', { viewBox: '0 0 ' + W + ' ' + H, class: 'diagram-svg', role: 'img' });
     sizeSvg(svg, W, H, 0.7, 1.15, n);
 
@@ -166,30 +167,39 @@
     if (ya.high) rot(X0 - 14, Y0, ya.high + ' →', 'quad-axis-end', 'end');
     if (ya.label) rot(X0 - 36, Y0 + SIZE / 2, ya.label, 'quad-axis', 'middle');
 
-    const placed = [];
     const FS = 12.5;
+    /* tous les points d'abord : une étiquette ne doit recouvrir ni les autres étiquettes ni les points à venir */
+    const placed = pts.map((p) => ({ x: X0 + p.x * SIZE - 8, y: Y0 + (1 - p.y) * SIZE - 8, w: 16, h: 16 }));
+    const overlap = (box) => placed.reduce((a, r) => a + (rectsHit(box, r, 1) ? 1 : 0), 0);
+    const inPlot = (b) => b.x >= X0 - 2 && b.x + b.w <= X0 + SIZE + 2 && b.y >= Y0 - 2 && b.y + b.h <= Y0 + SIZE + 2;
     pts.forEach((p) => {
       const px = X0 + p.x * SIZE, py = Y0 + (1 - p.y) * SIZE;
       const qi = (p.y > 0.5 ? 0 : 2) + (p.x > 0.5 ? 1 : 0);
       const col = pal[qi % pal.length];
-      const w = Math.ceil(textW(p.name, FS)) + 8, hh = 18;
-      const cands = [
-        { x: px + 11, y: py - hh / 2, a: 'start' }, { x: px - 11 - w, y: py - hh / 2, a: 'end' },
-        { x: px - w / 2, y: py - 11 - hh, a: 'middle' }, { x: px - w / 2, y: py + 11, a: 'middle' },
-      ];
-      let best = null;
+      const label = K.ellipsize(p.name, 150, FS);
+      const w = Math.ceil(textW(label, FS)) + 8, hh = 18;
+      /* huit directions autour du point, puis les mêmes en plus éloigné */
+      const cands = [];
+      [11, 24].forEach((d) => {
+        cands.push(
+          { x: px + d, y: py - hh / 2, a: 'start' }, { x: px - d - w, y: py - hh / 2, a: 'end' },
+          { x: px - w / 2, y: py - d - hh, a: 'middle' }, { x: px - w / 2, y: py + d, a: 'middle' },
+          { x: px + d, y: py - d - hh + 4, a: 'start' }, { x: px + d, y: py + d - 4, a: 'start' },
+          { x: px - d - w, y: py - d - hh + 4, a: 'end' }, { x: px - d - w, y: py + d - 4, a: 'end' }
+        );
+      });
+      let best = null, bestCost = Infinity;
       for (const c of cands) {
         const box = { x: c.x, y: c.y, w, h: hh };
-        const out = box.x < X0 - 4 || box.x + w > X0 + SIZE + 4 || box.y < Y0 - 4 || box.y + hh > Y0 + SIZE + 4;
-        if (!out && !placed.some((r) => rectsHit(box, r, 2))) { best = { c, box }; break; }
-        if (!best && !out) best = { c, box };
+        const cost = overlap(box) + (inPlot(box) ? 0 : 50);
+        if (cost < bestCost) { best = { c, box }; bestCost = cost; }
+        if (!cost) break;
       }
-      if (!best) best = { c: cands[0], box: { x: cands[0].x, y: cands[0].y, w, h: hh } };
-      placed.push(best.box, { x: px - 7, y: py - 7, w: 14, h: 14 });
+      placed.push(best.box);
       const g = s('g', { class: 'quad-point', 'data-id': p.name });
       g.append(s('circle', { cx: px, cy: py, r: 7, fill: col, class: 'quad-dot' }));
       const tx = best.c.a === 'start' ? best.box.x + 4 : best.c.a === 'end' ? best.box.x + w - 4 : best.box.x + w / 2;
-      g.append(s('text', { x: tx, y: best.box.y + 13, class: 'quad-label', 'text-anchor': best.c.a, text: p.name }));
+      g.append(s('text', { x: tx, y: best.box.y + 13, class: 'quad-label', 'text-anchor': best.c.a, text: label }));
       g.append(s('title', { text: p.name + ' (' + p.x + ', ' + p.y + ')' }));
       svg.append(g);
     });

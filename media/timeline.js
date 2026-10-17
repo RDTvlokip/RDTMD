@@ -197,7 +197,36 @@
     });
     let y = HEAD;
     rows.forEach((r) => { r.y = y; r.h = r.section ? SEC : ROW; y += r.h; });
-    const totalW = Math.ceil(leftW + chartW + PAD), totalH = Math.ceil(y + PAD);
+    /* graduations et libellés de mois : calculés avant le cadre pour qu'aucun texte ne dépasse à droite */
+    const ticks = [];
+    if (dayW >= 16) {
+      for (let d = minD; d <= maxD; d++) ticks.push({ d, label: fmtDay(d, { day: 'numeric' }), major: dow(d) === 0 });
+    } else if (days <= 150) {
+      for (let d = minD; d <= maxD; d++) if (dow(d) === 0) ticks.push({ d, label: fmtDay(d, { day: 'numeric', month: 'short' }), major: true });
+    } else {
+      for (let d = minD; d <= maxD; d++) {
+        if (new Date(d * 86400000).getUTCDate() === 1) ticks.push({ d, label: fmtDay(d, { month: 'short', year: '2-digit' }), major: true });
+      }
+    }
+    const monthLabels = [];
+    if (dayW >= 16) {
+      let m = -1;
+      for (let d = minD; d <= maxD; d++) {
+        const mo = new Date(d * 86400000).getUTCMonth();
+        if (mo !== m) { m = mo; monthLabels.push({ d, label: fmtDay(d, { month: 'long', year: 'numeric' }) }); }
+      }
+    }
+    const today = Math.floor(Date.now() / 86400000);
+    const todayLabel = isFr() ? 'Aujourd\'hui' : 'Today';
+    const showToday = !!n.today && today >= minD && today <= maxD;
+    let right = leftW + chartW;
+    ticks.forEach((t) => {
+      const w = textW(t.label, 11);
+      right = Math.max(right, dayW >= 16 ? X(t.d) + dayW / 2 + w / 2 : X(t.d) + 3 + w);
+    });
+    monthLabels.forEach((m) => { right = Math.max(right, X(m.d) + 2 + textW(m.label, 11.5, 600)); });
+    if (showToday) right = Math.max(right, X(today) + dayW / 2 + textW(todayLabel, 11, 600) / 2);
+    const totalW = Math.ceil(Math.max(leftW + chartW + PAD, right + 8)), totalH = Math.ceil(y + PAD);
 
     const svg = s('svg', { viewBox: '0 0 ' + totalW + ' ' + totalH, class: 'diagram-svg', role: 'img' });
     sizeSvg(svg, totalW, totalH, 0.7, 1.15, n);
@@ -210,39 +239,17 @@
       if (band++ % 2) svg.append(s('rect', { x: 0, y: r.y, width: totalW - PAD / 2, height: r.h, class: 'gantt-band' }));
     });
 
-    const ticks = [];
-    if (dayW >= 16) {
-      for (let d = minD; d <= maxD; d++) ticks.push({ d, label: fmtDay(d, { day: 'numeric' }), major: dow(d) === 0 });
-    } else if (days <= 150) {
-      for (let d = minD; d <= maxD; d++) if (dow(d) === 0) ticks.push({ d, label: fmtDay(d, { day: 'numeric', month: 'short' }), major: true });
-    } else {
-      for (let d = minD; d <= maxD; d++) {
-        if (new Date(d * 86400000).getUTCDate() === 1) ticks.push({ d, label: fmtDay(d, { month: 'short', year: '2-digit' }), major: true });
-      }
-    }
     ticks.forEach((t) => {
       svg.append(s('line', { x1: X(t.d), x2: X(t.d), y1: HEAD - 6, y2: totalH - PAD, class: 'gantt-grid' + (t.major ? ' major' : '') }));
       svg.append(s('text', { x: X(t.d) + (dayW >= 16 ? dayW / 2 : 3), y: HEAD - 12, class: 'gantt-tick', 'text-anchor': dayW >= 16 ? 'middle' : 'start', text: t.label }));
     });
-    if (dayW >= 16) {
-      let m = -1;
-      for (let d = minD; d <= maxD; d++) {
-        const dt = new Date(d * 86400000);
-        if (dt.getUTCMonth() !== m) {
-          m = dt.getUTCMonth();
-          svg.append(s('text', { x: X(d) + 2, y: 14, class: 'gantt-month', text: fmtDay(d, { month: 'long', year: 'numeric' }) }));
-        }
-      }
-    }
+    monthLabels.forEach((m) => svg.append(s('text', { x: X(m.d) + 2, y: 14, class: 'gantt-month', text: m.label })));
     svg.append(s('line', { x1: 0, x2: totalW - PAD / 2, y1: HEAD - 6, y2: HEAD - 6, class: 'gantt-axis' }));
 
     /* aujourd'hui */
-    if (n.today) {
-      const today = Math.floor(Date.now() / 86400000);
-      if (today >= minD && today <= maxD) {
-        svg.append(s('line', { x1: X(today) + dayW / 2, x2: X(today) + dayW / 2, y1: HEAD - 6, y2: totalH - PAD, class: 'gantt-today' }));
-        svg.append(s('text', { x: X(today) + dayW / 2, y: totalH - 3, class: 'gantt-today-label', 'text-anchor': 'middle', text: isFr() ? 'Aujourd\'hui' : 'Today' }));
-      }
+    if (showToday) {
+      svg.append(s('line', { x1: X(today) + dayW / 2, x2: X(today) + dayW / 2, y1: HEAD - 6, y2: totalH - PAD, class: 'gantt-today' }));
+      svg.append(s('text', { x: X(today) + dayW / 2, y: totalH - 3, class: 'gantt-today-label', 'text-anchor': 'middle', text: todayLabel }));
     }
 
     /* barres */

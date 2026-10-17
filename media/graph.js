@@ -210,9 +210,11 @@
       const side = (extreme(e.from, 'R') && extreme(e.to, 'R')) || !(extreme(e.from, 'L') && extreme(e.to, 'L')) ? 'R' : 'L';
       const span = rankSpan(e.from, e.to);
       const edgeX = side === 'R' ? Math.max(...span.map((u) => pos[u].x + pos[u].w)) : Math.min(...span.map((u) => pos[u].x));
-      const k = used[side === 'R' ? 'right' : 'left']++;
+      /* les flèches de retour d'un même côté s'écartent d'une largeur cumulée (et non du multiple de la leur) */
       const wl = e.label ? lblW(e) : 0;
-      const archX = side === 'R' ? edgeX + 34 + (wl + 12) * k : edgeX - 34 - (wl + 12) * k;
+      const offSum = used[side === 'R' ? 'right' : 'left'];
+      used[side === 'R' ? 'right' : 'left'] = offSum + wl + 14;
+      const archX = side === 'R' ? edgeX + 34 + offSum : edgeX - 34 - offSum;
       const x1 = side === 'R' ? f.x + f.w : f.x, y1 = f.y + f.h / 2;
       const x2 = side === 'R' ? t.x + t.w : t.x, y2 = t.y + t.h / 2;
       const c = (archX - (x1 + x2) / 8) / 0.75;
@@ -226,23 +228,50 @@
 
     /* ---------- étiquettes sans collision ---------- */
     const nodeRects = ids.map((u) => pos[u]);
-    const placed = [];
-    geo.filter((g) => g.fixed).forEach((g) => { g.box = g.fixed; placed.push(g.box); });
+    /* index spatial (grille) : chaque candidat n'est comparé qu'aux rectangles voisins, pas à tout le graphe */
+    const CELL = 96, grid = new Map();
+    const cellsOf = (r) => {
+      const keys = [];
+      for (let cx = Math.floor((r.x - 4) / CELL); cx <= Math.floor((r.x + r.w + 4) / CELL); cx++) {
+        for (let cy = Math.floor((r.y - 4) / CELL); cy <= Math.floor((r.y + r.h + 4) / CELL); cy++) keys.push(cx + ',' + cy);
+      }
+      return keys;
+    };
+    const addRect = (r) => cellsOf(r).forEach((k) => { let a = grid.get(k); if (!a) grid.set(k, a = []); a.push(r); });
+    const countHits = (box) => {
+      const seen = new Set();
+      for (const k of cellsOf(box)) {
+        const a = grid.get(k);
+        if (a) for (const r of a) if (!seen.has(r) && rectsHit(box, r, 3)) seen.add(r);
+      }
+      return seen.size;
+    };
+    nodeRects.forEach(addRect);
+    geo.filter((g) => g.fixed).forEach((g) => { g.box = g.fixed; addRect(g.box); });
+
+    /* candidats : d'abord le long de l'arête, puis décalés de part et d'autre (normale à la courbe) */
     const ts = isLR ? [0.5, 0.38, 0.62, 0.28, 0.72, 0.2, 0.8, 0.14, 0.86] : [0.5, 0.35, 0.65, 0.25, 0.75, 0.15, 0.85, 0.1, 0.9];
+    const cands = ts.map((t) => [t, 0]);
+    [16, -16, 30, -30].forEach((off) => ts.forEach((t) => cands.push([t, off])));
     geo.filter((g) => g.e.label && !g.fixed).forEach((g) => {
       const w = lblW(g.e);
-      let best = null;
-      for (const t of ts) {
-        const [x, y] = g.back && g.apex && t === 0.5 ? g.apex : bez(g.p, t);
-        const side = !isLR && !g.back ? Math.sign(g.p[3][0] - g.p[0][0]) * (Math.abs(g.p[3][0] - g.p[0][0]) > 20 ? 1 : 0) : 0;
-        const bx = side > 0 ? x + 8 : side < 0 ? x - 8 - w : x - w / 2;
-        const box = { x: bx, y: y - LBL_H / 2, w, h: LBL_H };
-        const hit = nodeRects.some((r) => rectsHit(box, r, 2)) || placed.some((r) => rectsHit(box, r, 3));
-        if (!hit) { best = box; break; }
-        if (!best) best = box;
+      let best = null, bestCost = Infinity;
+      for (const [t, off] of cands) {
+        const [x, y] = g.back && g.apex && t === 0.5 && !off ? g.apex : bez(g.p, t);
+        let box;
+        if (off) {
+          const [tx, ty] = bezTangent(g.p, t);
+          box = { x: x - ty * off - w / 2, y: y + tx * off - LBL_H / 2, w, h: LBL_H };
+        } else {
+          const side = !isLR && !g.back ? Math.sign(g.p[3][0] - g.p[0][0]) * (Math.abs(g.p[3][0] - g.p[0][0]) > 20 ? 1 : 0) : 0;
+          box = { x: side > 0 ? x + 8 : side < 0 ? x - 8 - w : x - w / 2, y: y - LBL_H / 2, w, h: LBL_H };
+        }
+        const cost = countHits(box);
+        if (cost < bestCost) { best = box; bestCost = cost; }
+        if (!cost) break;
       }
       g.box = best;
-      placed.push(best);
+      addRect(best);
     });
 
     /* ---------- rectangles de groupes (du plus profond au plus englobant) ---------- */

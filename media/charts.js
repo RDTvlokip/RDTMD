@@ -92,16 +92,27 @@
     const y2S = hasY2 ? niceScale(mn2, mx2, true) : null;
 
     const maxLen = (ticks) => Math.max(...ticks.map((v) => fmt(v).length));
-    const L = Math.max(56, Math.ceil(maxLen(yS.ticks) * 8.5) + 16) + (n.ylabel ? 16 : 0);
+    let L = Math.max(56, Math.ceil(maxLen(yS.ticks) * 8.5) + 16) + (n.ylabel ? 16 : 0);
     const R = hasY2 ? Math.max(48, Math.ceil(maxLen(y2S.ticks) * 8.5) + 16) : 18;
     const T = n.unit || n.unit2 ? 34 : 20;
 
-    const pw = W - L - R;
-    const band = pw / cats.length;
+    let pw = W - L - R;
+    let band = pw / cats.length;
     const maxCatLen = Math.max(...cats.map((c) => String(c).length));
     const estCatW = maxCatLen * 7.5;
     const rotate = band < 52 || band < estCatW || (cats.length > 6 && maxCatLen >= 4);
-    const B = (rotate ? Math.min(88, Math.max(50, 24 + Math.round(estCatW * 0.7))) : 44) + (n.xlabel ? 18 : 0);
+    /* libellés tronqués (l'infobulle garde le texte complet) pour qu'un libellé tourné ne sorte jamais du cadre */
+    const fullCats = cats.map((c) => String(c));
+    const catTexts = fullCats.map((c) => ellipsize(c, rotate ? 120 : Math.max(30, band - 6), 12));
+    const maxLabelW = Math.max(...catTexts.map((c) => textW(c, 12)));
+    if (rotate) {
+      /* un libellé tourné de 40° s'étend vers la gauche depuis le centre de sa colonne : on élargit la marge si besoin */
+      const needL = Math.ceil(maxLabelW * 0.77 + 8 - band / 2);
+      if (needL > L) { L = needL; pw = W - L - R; band = pw / cats.length; }
+    }
+    /* trop de catégories pour que chaque libellé tourné tienne : on n'en affiche qu'une sur `step` */
+    const step = rotate ? Math.max(1, Math.ceil(18 / band)) : Math.max(1, Math.ceil((maxLabelW + 6) / band));
+    const B = (rotate ? Math.min(110, Math.max(50, 30 + Math.round(maxLabelW * 0.65))) : 44) + (n.xlabel ? 18 : 0);
     const ph = H - T - B;
     const y = (v) => T + ph * (1 - (v - yS.lo) / (yS.hi - yS.lo));
     const yR = hasY2 ? (v) => T + ph * (1 - (v - y2S.lo) / (y2S.hi - y2S.lo)) : y;
@@ -121,14 +132,16 @@
     }
 
     cats.forEach((c, i) => {
+      if (i % step) return;
       const cx = L + band * (i + 0.5), cy = H - B + 18;
+      let lbl;
       if (rotate) {
-        const lbl = s('text', { x: cx, y: cy, class: 'lbl', 'text-anchor': 'end', transform: 'rotate(-40 ' + cx + ' ' + cy + ')', text: c });
-        if (band < 26) lbl.setAttribute('font-size', '10.5px');
-        svg.append(lbl);
+        lbl = s('text', { x: cx, y: cy, class: 'lbl', 'text-anchor': 'end', transform: 'rotate(-40 ' + cx + ' ' + cy + ')', text: catTexts[i] });
       } else {
-        txt(svg, cx, cy, c, 'middle');
+        lbl = s('text', { x: cx, y: cy, class: 'lbl', 'text-anchor': 'middle', text: catTexts[i] });
       }
+      if (catTexts[i] !== fullCats[i]) lbl.append(s('title', { text: fullCats[i] }));
+      svg.append(lbl);
     });
 
     if (isBar) {
