@@ -1,0 +1,141 @@
+/* RDTMD 1.1 : figures interactives, nouveaux diagrammes, thèmes, sommaire, notes de bas de page, impression. */
+
+/* ---------- figures : barre d'outils, zoom, survol ---------- */
+figure.chart, figure.diagram { position: relative; }
+.fig-tools { position: absolute; top: 0; right: 0; display: flex; gap: 4px; opacity: 0; transition: opacity .15s ease; z-index: 2; }
+figure.has-tools:hover .fig-tools, figure.has-tools:focus-within .fig-tools { opacity: 1; }
+.fig-btn { background: var(--vscode-textCodeBlock-background); color: var(--vscode-foreground); border: 1px solid var(--vscode-panel-border); border-radius: 4px; padding: 1px 7px; font-size: 11px; line-height: 1.6; font-family: var(--vscode-font-family); cursor: pointer; }
+.fig-btn:hover { background: var(--vscode-toolbar-hoverBackground); }
+.diagram-svg.zoomed { cursor: grab; touch-action: none; }
+.diagram-svg.panning { cursor: grabbing; }
+.diagram-svg .diagram-node, .diagram-svg .diagram-edge, .diagram-svg .seq-part, .diagram-svg .seq-lifeline, .diagram-svg .gantt-task { transition: opacity .12s ease; }
+.diagram-svg.hl .diagram-node:not(.on), .diagram-svg.hl .diagram-edge:not(.on), .diagram-svg.hl .seq-part:not(.on),
+.diagram-svg.hl .seq-lifeline:not(.on), .diagram-svg.hl .gantt-task:not(.on) { opacity: .22; }
+.diagram-svg.hl .diagram-edge.on { opacity: 1; stroke-width: 2.4; }
+
+/* ---------- marqueurs et formes ---------- */
+.mk-hollow { fill: var(--vscode-editor-background, #1e1e1e); stroke: currentColor; }
+.state-dot { fill: var(--vscode-foreground); }
+.cyl-top { fill: none; }
+.diagram-group { stroke-width: 1.2; stroke-dasharray: 5 4; }
+.diagram-group-title { font-size: 12.5px; font-weight: 600; font-family: var(--vscode-font-family); }
+.diagram-node-box { vector-effect: none; }
+
+/* ---------- er / class ---------- */
+.er-head { stroke: none; }
+.er-sep { stroke: var(--vscode-panel-border, #454545); stroke-width: 1.2; }
+.er-name { fill: var(--vscode-foreground); font-weight: 700; font-size: 13px; font-family: var(--vscode-font-family); }
+.er-attr { fill: var(--vscode-foreground); font-size: 12.5px; font-family: var(--vscode-font-family); }
+.er-pk { font-weight: 700; }
+.er-type { fill: var(--vscode-descriptionForeground, var(--vscode-foreground)); font-size: 12px; font-family: var(--vscode-font-family); opacity: .85; }
+.er-key { fill: var(--vscode-descriptionForeground, var(--vscode-foreground)); font-size: 10.5px; font-weight: 700; font-family: var(--vscode-font-family); }
+.er-card { stroke: var(--vscode-foreground); stroke-width: 1.5; fill: none; opacity: .85; }
+.er-card-zero { fill: var(--vscode-editor-background, #1e1e1e); }
+.cls-stereo { fill: var(--vscode-descriptionForeground, var(--vscode-foreground)); font-size: 11px; font-style: italic; font-family: var(--vscode-font-family); }
+
+/* ---------- séquence : blocs, notes, activations ---------- */
+.seq-frame { fill: none; stroke: var(--vscode-panel-border, #454545); stroke-width: 1.3; }
+.seq-frame-tab { fill: var(--vscode-textCodeBlock-background); stroke: var(--vscode-panel-border, #454545); stroke-width: 1.2; }
+.seq-frame-kind { fill: var(--vscode-foreground); font-weight: 700; font-size: 11.5px; font-family: var(--vscode-font-family); }
+.seq-frame-label { fill: var(--vscode-foreground); font-size: 12px; font-family: var(--vscode-font-family); opacity: .9; }
+.seq-frame-else { stroke: var(--vscode-panel-border, #454545); stroke-width: 1.2; stroke-dasharray: 5 4; }
+.seq-activation { fill: var(--vscode-textCodeBlock-background); stroke: var(--vscode-foreground); stroke-opacity: .55; stroke-width: 1.2; }
+.seq-note-bg { fill: var(--vscode-editor-background, #1e1e1e); stroke: none; }
+.seq-note { fill: rgba(230, 200, 78, .17); stroke: #e6c84e; stroke-width: 1.2; }
+.seq-note-text { fill: var(--vscode-foreground); font-size: 12px; font-family: var(--vscode-font-family); }
+
+/* ---------- timeline ---------- */
+.timeline-section { font-size: 12.5px; font-weight: 600; font-family: var(--vscode-font-family); fill: var(--vscode-foreground); }
+
+/* ---------- gantt ---------- */
+.gantt-band { fill: rgba(128, 128, 128, .07); }
+.gantt-sec-bg { fill: rgba(128, 128, 128, .15); }
+.gantt-grid { stroke: var(--vscode-panel-border, #454545); stroke-width: 1; opacity: .5; }
+.gantt-grid.major { opacity: .9; }
+.gantt-axis { stroke: var(--vscode-panel-border, #454545); stroke-width: 1.4; }
+.gantt-tick { fill: var(--vscode-descriptionForeground, var(--vscode-foreground)); font-size: 11px; font-family: var(--vscode-font-family); }
+.gantt-month { fill: var(--vscode-foreground); font-size: 11.5px; font-weight: 600; font-family: var(--vscode-font-family); }
+.gantt-name { fill: var(--vscode-foreground); font-size: 12.5px; font-family: var(--vscode-font-family); }
+.gantt-sec { fill: var(--vscode-foreground); font-size: 12.5px; font-weight: 700; font-family: var(--vscode-font-family); }
+.gantt-bar-text { font-size: 11px; font-weight: 600; font-family: var(--vscode-font-family); pointer-events: none; }
+.gantt-active-ring { fill: none; stroke: var(--vscode-foreground); stroke-width: 1.6; }
+.gantt-milestone { stroke: var(--vscode-editor-background, #1e1e1e); stroke-width: 1.5; }
+.gantt-today { stroke: #e65c7a; stroke-width: 1.6; stroke-dasharray: 4 3; }
+.gantt-today-label { fill: #e65c7a; font-size: 11px; font-weight: 600; font-family: var(--vscode-font-family); }
+
+/* ---------- mindmap ---------- */
+.mindmap-node.has-kids { cursor: pointer; }
+.mindmap-node.has-kids:hover .mindmap-box { stroke-width: 2.6; }
+.mindmap-badge { fill: var(--vscode-editor-background, #1e1e1e); font-size: 10.5px; font-weight: 700; font-family: var(--vscode-font-family); pointer-events: none; }
+
+/* ---------- quadrant ---------- */
+.quad-frame { stroke: var(--vscode-panel-border, #454545); stroke-width: 1.5; }
+.quad-mid { stroke: var(--vscode-panel-border, #454545); stroke-width: 1.2; stroke-dasharray: 5 4; }
+.quad-name { font-size: 12.5px; font-weight: 700; font-family: var(--vscode-font-family); opacity: .95; }
+.quad-axis { fill: var(--vscode-foreground); font-size: 12.5px; font-weight: 600; font-family: var(--vscode-font-family); }
+.quad-axis-end { fill: var(--vscode-descriptionForeground, var(--vscode-foreground)); font-size: 11.5px; font-family: var(--vscode-font-family); }
+.quad-label { fill: var(--vscode-foreground); font-size: 12.5px; font-family: var(--vscode-font-family); }
+.quad-dot { stroke: var(--vscode-editor-background, #1e1e1e); stroke-width: 1.5; }
+
+/* ---------- graphiques ---------- */
+.chart-svg .chart-center { font-size: 20px; font-weight: 700; }
+.chart-svg .scatter-pt { stroke: var(--vscode-editor-background, #1e1e1e); stroke-width: 1.2; }
+
+/* ---------- sommaire et notes de bas de page ---------- */
+.toc { border: 1px solid var(--vscode-panel-border); border-radius: 8px; padding: 8px 20px; margin: 1.2em 0; background: var(--vscode-textBlockQuote-background); }
+.toc ul { list-style: none; margin: 0; padding-left: 1.2em; }
+.toc > ul { padding-left: 0; }
+.toc li { margin: .2em 0; }
+.toc a { text-decoration: none; }
+.toc a:hover { text-decoration: underline; }
+.toc-empty { opacity: .6; font-style: italic; }
+.footnotes { font-size: .9em; margin-top: 2.5em; }
+.footnotes ol { padding-left: 1.6em; }
+.footnotes li { margin: .35em 0; }
+.fn-ref a { text-decoration: none; font-size: .8em; padding: 0 .1em; }
+.fn-back { text-decoration: none; opacity: .7; }
+h1[id], h2[id], h3[id], h4[id], h5[id], h6[id] { scroll-margin-top: 12px; }
+
+/* ---------- thèmes de l'aperçu (réglage rdtmd.theme) ---------- */
+body[data-rdt-theme="light"] {
+  --vscode-foreground: #24292f; --vscode-editor-background: #ffffff; --vscode-panel-border: #d0d7de; --vscode-textCodeBlock-background: #f3f5f7;
+  --vscode-descriptionForeground: #57606a; --vscode-toolbar-hoverBackground: #e7ebef; --vscode-textLink-foreground: #0969da;
+  --vscode-textBlockQuote-background: #f6f8fa; --vscode-textBlockQuote-border: #d0d7de; --vscode-button-background: #0969da; --vscode-button-foreground: #ffffff;
+  --vscode-errorForeground: #cf222e; --vscode-focusBorder: #0969da; --vscode-checkbox-border: #6e7781;
+  background: #ffffff; color-scheme: light;
+}
+body[data-rdt-theme="dark"] {
+  --vscode-foreground: #d4d4d4; --vscode-editor-background: #1e1e1e; --vscode-panel-border: #3c3c3c; --vscode-textCodeBlock-background: #2a2a2a;
+  --vscode-descriptionForeground: #9d9d9d; --vscode-toolbar-hoverBackground: #383838; --vscode-textLink-foreground: #4daafc;
+  --vscode-textBlockQuote-background: #252526; --vscode-textBlockQuote-border: #4a4a4a; --vscode-button-background: #0e639c; --vscode-button-foreground: #ffffff;
+  --vscode-errorForeground: #f48771; --vscode-focusBorder: #007fd4; --vscode-checkbox-border: #6b6b6b;
+  background: #1e1e1e; color-scheme: dark;
+}
+body[data-rdt-theme="paper"] {
+  --vscode-foreground: #3b3226; --vscode-editor-background: #fbf6ea; --vscode-panel-border: #d9cdb4; --vscode-textCodeBlock-background: #f1e8d3;
+  --vscode-descriptionForeground: #7a6a4f; --vscode-toolbar-hoverBackground: #e9dec4; --vscode-textLink-foreground: #8a4b08;
+  --vscode-textBlockQuote-background: #f4ecd8; --vscode-textBlockQuote-border: #d9cdb4; --vscode-button-background: #8a4b08; --vscode-button-foreground: #fbf6ea;
+  --vscode-errorForeground: #a4281b; --vscode-focusBorder: #8a4b08; --vscode-checkbox-border: #8b7b5c;
+  background: #fbf6ea; color-scheme: light;
+}
+body[data-rdt-theme="contrast"] {
+  --vscode-foreground: #ffffff; --vscode-editor-background: #000000; --vscode-panel-border: #ffffff; --vscode-textCodeBlock-background: #0a0a0a;
+  --vscode-descriptionForeground: #e0e0e0; --vscode-toolbar-hoverBackground: #333333; --vscode-textLink-foreground: #3fc1ff;
+  --vscode-textBlockQuote-background: #0a0a0a; --vscode-textBlockQuote-border: #ffffff; --vscode-button-background: #ffffff; --vscode-button-foreground: #000000;
+  --vscode-errorForeground: #ff6e6e; --vscode-focusBorder: #f38518; --vscode-checkbox-border: #ffffff;
+  background: #000000; color-scheme: dark;
+}
+
+/* ---------- impression et export PDF ---------- */
+@media print {
+  body { background: #ffffff !important; color: #000000 !important; padding: 0 !important; }
+  main { max-width: none; }
+  .fig-tools, .code-copy-btn, .inc-chip { display: none !important; }
+  figure, table, pre, .code-block, .callout, .metrics-block, .chat-block, .tabs-block, details, blockquote, .toc { break-inside: avoid; }
+  h1, h2, h3, h4 { break-after: avoid; }
+  .tab-pane { display: block !important; }
+  .tabs-nav { display: none !important; }
+  details > * { display: block; }
+  a { color: inherit; text-decoration: underline; }
+  .diagram-svg, .chart-svg { max-width: 100% !important; min-width: 0 !important; }
+}

@@ -79,9 +79,11 @@ function parseFlow(kind, title, body, bodyBase, line, diags) {
     if (!cur) {
       nodes.push(expr.id);
       nodeInfo[expr.id] = { label: expr.label, shape: expr.shape };
+      if (expr.explicit) nodeInfo[expr.id].explicit = true;
     } else if (expr.explicit) {
       cur.label = expr.label;
       cur.shape = expr.shape;
+      cur.explicit = true;
     }
     if (gstack.length && nodeInfo[expr.id].group === undefined) nodeInfo[expr.id].group = gstack[gstack.length - 1].id;
     return expr.id;
