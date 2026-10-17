@@ -182,7 +182,7 @@
   function renderToc(n) {
     const list = headings.filter((x) => x.level <= n.depth);
     const nav = h('nav', { class: 'toc', 'aria-label': 'Table of contents' });
-    if (!list.length) { nav.append(h('div', { class: 'toc-empty', text: 'Aucun titre' })); return nav; }
+    if (!list.length) { nav.append(h('div', { class: 'toc-empty', text: /^fr/i.test(navigator.language || '') ? 'Aucun titre' : 'No headings' })); return nav; }
     const base = Math.min(...list.map((x) => x.level));
     const rootUl = h('ul');
     const stack = [{ level: base - 1, ul: rootUl }];

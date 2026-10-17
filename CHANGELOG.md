@@ -2,6 +2,35 @@
 
 All notable changes to the **RDTMD** project are documented in this file.
 
+## [1.1.0] - 2026-10-17
+
+### Added
+- **Export**: `RDTMD: Export as HTML` writes a single self-contained file (styles, scripts, data and local images embedded, includes expanded, no network access). `RDTMD: Export as PDF` prints it with an installed Chromium-based browser (Edge, Chrome, Chromium, Brave; `rdtmd.browserPath` to choose), with print-friendly page breaks, and falls back to the system browser's print dialog when none is found.
+- **Figure toolbar**: every chart and diagram can be saved as SVG (styles embedded) or PNG (2x). Diagrams can be zoomed (buttons, `Ctrl` + wheel), panned and reset, and hovering a node, participant or task highlights its links.
+- **New diagram types**: `state` (state machine with `[*]`), `gantt` (sections, dates, durations, `after`, `done`/`active`/`crit`/`milestone`, `@today`), `quadrant` (prioritization matrix), `er` (entities and crow's-foot relations) and `class` (classes with stereotypes and UML relations).
+- **Flowcharts**: node shapes (`[ ]`, `( )`, `{ }`, `(( ))`, `[( )]`, `{{ }}`), chained edges (`A -> B -> C`), titled `group ... end` frames, and parallel edges.
+- **Sequence diagrams**: `participant ... as ...`, `activate`/`deactivate`, notes (`over`, `left of`, `right of`), `alt`/`else`, `opt`, `loop`, `par`/`and` blocks, and `@autonumber`.
+- **Timelines**: `section` groups with a legend and `@orient vertical`. **Mindmaps**: per-branch colors (`{#hex}`) and click-to-collapse.
+- **Charts**: `area`, `scatter` and `donut` types; `@stack`, `@horizontal`, a secondary axis (`@y2`, `@unit2`), `@xlabel`, `@ylabel` and `@center`.
+- **Block options** on every chart and diagram: `@theme` (six palettes), `@width`, `@align`.
+- **Document features**: `@toc`, heading anchors (`{#id}`), internal `#anchor` links, and footnotes (`[^id]`).
+- **Preview themes and palette**: `rdtmd.theme` (`auto`, `light`, `dark`, `paper`, `contrast`) and `rdtmd.palette`. Print stylesheet for clean paper output.
+- **Editor**: completion (directives, chart/diagram types, options, block keywords), 24 snippets (`rdt-...`), quick fixes (misspelled kinds and options, chart series length, missing `:::`, `end` and footnote definitions, stray `end`), folding of `:::` blocks, synchronized scrolling between the editor and the preview (`rdtmd.syncScroll`), and syntax highlighting for the new constructs.
+- Diagnostics now carry a machine-readable `code` and `data`, and suggest the closest valid name ("did you mean").
+- New example `example/demo.rdtmd` covering the whole language, and new tests (`test-v11.js`, `test-ext.js`).
+
+### Changed
+- The preview renderer is split into small modules (`svgkit`, `charts`, `graph`, `sequence`, `timeline`, `misc`, `interact`); the list of files is shared by the preview, the HTML export and the tests (`src/assets.js`).
+- Diagram markers get unique ids, so arrowheads still render in tabs and collapsed sections.
+- Unknown chart and diagram options are reported with a "did you mean" suggestion, and invalid `@theme`, `@width` and `@align` values are flagged.
+
+### Fixed
+- A flowchart line such as `Input -> Processor -> Storage` created a single node named "Processor -> Storage"; it now creates two edges.
+- Back edges of a left-to-right flowchart no longer cross the nodes of their column when they can pass below.
+- In class diagrams, parents and owners are placed above their children.
+
+---
+
 ## [1.0.3] - 2026-10-17
 
 ### Fixed

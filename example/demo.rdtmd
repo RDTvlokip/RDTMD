@@ -1,6 +1,10 @@
-# RDTMD : démo
+# RDTMD : démo {#top}
 
 Un **noyau** from scratch, sans HTML. Du *italique*, du ~~barré~~, du `code`, une formule $E = mc^2$ et un lien [Zenodo](https://zenodo.org).
+
+Cette démo présente tout ce que sait faire RDTMD 1.1 : texte, maths, graphiques, neuf types de diagrammes, onglets, métriques, notes de bas de page et export HTML/PDF[^export].
+
+@toc 2
 
 ---
 
@@ -12,7 +16,8 @@ Un **noyau** from scratch, sans HTML. Du *italique*, du ~~barré~~, du `code`, u
   - bloc avec `$$`
 - [x] Graphiques
 - [x] Diagrammes natifs
-- [ ] Export
+- [x] Export HTML et PDF
+- [ ] Éditeur graphique
 
 1. Premier
 2. Deuxième
@@ -49,7 +54,9 @@ $$
 A = \begin{pmatrix} 1 & 2 \\ 3 & 4 \end{pmatrix}, \quad f(x) = \begin{cases} x & x > 0 \\ 0 & \text{sinon} \end{cases}
 $$
 
-## Graphiques
+## Graphiques {#graphiques}
+
+Six familles : `bar`, `line`, `area`, `scatter`, `pie` et `donut`. Chaque bloc accepte `@theme`, `@width` et `@align`.
 
 :::chart bar "Ventes par mois"
 @unit €
@@ -71,7 +78,62 @@ Rust: 25
 JS: 15
 :::
 
-## Diagrammes natifs (SVG)
+### Barres empilées et horizontales
+
+:::chart bar "Mémoire par langage"
+@stack
+@unit Mo
+x: Jan, Fév, Mar, Avr
+Python: 12, 18, 9, 22
+Rust: 7, 5, 14, 8
+JS: 4, 9, 6, 11
+:::
+
+:::chart bar "Temps par étape"
+@horizontal
+@unit ms
+Parser: 12
+Rendu SVG: 48
+Export HTML: 31
+Coloration: 19
+:::
+
+### Axe secondaire, aires, nuages de points, donut
+
+:::chart bar "Trafic et latence"
+@unit Requêtes
+@unit2 ms
+@y2 Latence
+x: Lun, Mar, Mer, Jeu, Ven
+Requêtes: 120, 180, 150, 210, 170
+Latence: 42, 55, 48, 71, 52
+:::
+
+:::chart area "Charge par équipe"
+@stack
+@theme warm
+x: T1, T2, T3, T4
+Backend: 10, 14, 12, 18
+Frontend: 6, 9, 11, 7
+:::
+
+:::chart scatter "Taille et temps de rendu"
+@xlabel Taille (Ko)
+@ylabel Temps (ms)
+Petits: (1, 2) (2, 3.5) (3, 4.1) (4, 6)
+Grands: (8, 14) (10, 19) (12, 22) (9, 15)
+:::
+
+:::chart donut "Répartition du temps"
+@center 100 %
+Code: 55
+Tests: 25
+Docs: 20
+:::
+
+## Diagrammes natifs (SVG) {#diagrammes}
+
+Neuf types : `flow`, `state`, `sequence`, `mindmap`, `timeline`, `gantt`, `quadrant`, `er` et `class`. Survolez un nœud pour mettre en évidence ses liens, zoomez avec `Ctrl` + molette, et enregistrez une figure en SVG ou PNG avec les boutons qui apparaissent au survol.
 
 :::diagram flow "Architecture IA"
 Input -> Tokenizer
@@ -103,6 +165,147 @@ RDTMD
 2024: AG-BPE publié | Premier crawler
 2025: RDTvlokip Search
 2026: RDTMD
+:::
+
+### Organigramme : formes, groupes et chaînes
+
+:::diagram flow "Validation d'une commande"
+Start((Début)) -> Check{Stock ?}
+Check -> Pay(Paiement) : oui
+Check -> Wait[En attente] : non
+Wait --> Check : relancer
+Pay -> Db[(Base de données)] -> Ship{{Expédition}}
+Ship -> Done((Fin))
+:::
+
+:::diagram flow "Architecture en groupes"
+group Frontend
+UI[Interface] -> Router
+end
+group Backend
+API -> Auth
+API -> Db[(PostgreSQL)]
+end
+Router -> API : HTTPS
+Auth --> Db
+:::
+
+### Machine à états
+
+:::diagram state "Cycle d'une tâche"
+[*] -> Attente
+Attente -> EnCours : démarrer
+EnCours -> Attente : pause
+EnCours -> Terminée : finir
+Terminée -> [*]
+:::
+
+### Séquence : blocs, notes, activations
+
+:::diagram sequence "Authentification"
+@autonumber
+participant UI as Navigateur
+participant API
+participant DB as Base
+UI -> API : POST /login
+activate API
+API -> DB : SELECT user
+DB --> API : ligne
+note over API,DB : mot de passe haché (bcrypt)
+alt identifiants valides
+API --> UI : 200 + JWT
+else identifiants invalides
+API --> UI : 401
+end
+deactivate API
+loop toutes les 5 min
+UI -> API : GET /refresh
+end
+:::
+
+### Planning, priorités, schémas
+
+:::diagram gantt "Planning de la version 1.1.0"
+@today
+section Conception
+Spécification: done, 2026-10-01, 5d
+Maquettes: done, after Spécification, 4d
+section Développement
+Parser: active, 2026-10-08, 10d
+Rendu: after Parser, 2w
+Export HTML: crit, 2026-10-20, 8d
+section Livraison
+Tests: 2026-11-01, 6d
+Release: milestone, after Tests
+:::
+
+:::diagram quadrant "Priorisation des idées"
+@x Effort: Faible -> Élevé
+@y Impact: Faible -> Élevé
+@quadrants À planifier | Projets majeurs | Gains rapides | À éviter
+Export PDF: 0.25, 0.85
+Gantt: 0.55, 0.8
+Thèmes: 0.2, 0.3
+Collaboration: 0.9, 0.9
+Snippets: 0.15, 0.65
+:::
+
+:::diagram er "Schéma de base de données"
+entity User
+  id: int PK
+  email: text UK
+  org_id: int FK
+entity Org
+  id: int PK
+  name: text
+entity Post
+  id: int PK
+  user_id: int FK
+  title: text
+Org 1--* User : emploie
+User 1--0..* Post : écrit
+:::
+
+:::diagram class "Hiérarchie de classes"
+class Animal <<abstract>>
+  +name: string
+  +age: int
+  +speak()
+class Dog
+  +fetch()
+class Cat
+  +purr()
+class Owner
+  +pets: Animal[]
+Dog --|> Animal
+Cat --|> Animal
+Owner o-- Animal : possède
+:::
+
+### Chronologie verticale et carte colorée
+
+:::diagram timeline "Feuille de route"
+@orient vertical
+section Passé
+2024: Premier prototype
+2025: Version publique | Marketplace
+section Futur
+2026: Version 1.1 : nouveaux diagrammes, export, thèmes
+:::
+
+:::diagram mindmap "Écosystème"
+RDTMD
+  Parser {#e6794e}
+    Blocs
+      Directives
+      Includes
+    Inline
+  Rendu {#4e9de6}
+    SVG
+    Maths
+  Extension {#5cc08a}
+    Aperçu
+    Export
 :::
 
 :::note Astuce
@@ -138,9 +341,9 @@ async function chargerDonnees(url) {
 
 ```diff
 @@ -1,4 +1,5 @@
--const version = "0.5.1";
-+const version = "0.6.0";
-+// Ajout des diagrammes natifs
+-const version = "1.0.3";
++const version = "1.1.0";
++// Ajout des diagrammes gantt, quadrant, er et class
 ```
 
 ## Nouvelles extensions natives
@@ -185,7 +388,17 @@ Voici les hyperparamètres utilisés pour la reproductibilité :
 - Batch size : 64
 :::
 
+## Sommaire, ancres et notes de bas de page
+
+`@toc 2` insère un sommaire à partir des titres, `{#id}` donne une ancre stable à un titre (voir [les graphiques](#graphiques) ou [les diagrammes](#diagrammes)), et `[^id]` crée une note de bas de page[^note] qui se retrouve en fin de document.
+
+[^export]: Les commandes **RDTMD: Export as HTML** et **RDTMD: Export as PDF** produisent un fichier autonome, avec images, styles et scripts intégrés.
+[^note]: Les notes sont numérotées dans l'ordre de leur première citation, et chaque note renvoie à son appel dans le texte.
+
 ## Include
 
 @include inclus.rdtmd
 
+### Fichier inclus
+
+Ce bloc vient de `inclus.rdtmd`, inclus avec **@include**.

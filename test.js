@@ -16,7 +16,7 @@ for (const t of ['heading', 'paragraph', 'list', 'quote', 'table', 'math', 'char
 
 // 2. Graphiques
 const charts = ast.children.filter((n) => n.type === 'chart');
-assert.strictEqual(charts.length, 3);
+assert(charts.length >= 3);
 assert.strictEqual(charts[0].unit, '€');
 assert.strictEqual(charts[0].categories.length, 12);
 assert.deepStrictEqual(charts[0].series[1].values.slice(0, 4), [15, 21, 14, 30]);
@@ -25,7 +25,7 @@ assert.deepStrictEqual(charts[2].categories, ['Python', 'Rust', 'JS']);
 
 // 3. Diagrammes
 const diagrams = ast.children.filter((n) => n.type === 'diagram');
-assert.strictEqual(diagrams.length, 4);
+assert(diagrams.length >= 4);
 
 // Flow
 const flow = diagrams.find((d) => d.kind === 'flow');

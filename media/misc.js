@@ -107,7 +107,9 @@
           g.append(s('circle', { cx: bx, cy: nd.y, r: 10, fill: nd.color, 'fill-opacity': 0.9 }));
           g.append(s('text', { x: bx, y: nd.y + 4, class: 'mindmap-badge', 'text-anchor': 'middle', text: '+' + nd.hidden }));
         }
-        g.append(s('title', { text: nd.text + (nd.kids ? ' (clic : ' + (nd.hidden ? 'déplier' : 'replier') + ')' : '') }));
+        const fr = typeof navigator !== 'undefined' && /^fr/i.test(navigator.language || '');
+        const verb = nd.hidden ? (fr ? 'déplier' : 'expand') : (fr ? 'replier' : 'collapse');
+        g.append(s('title', { text: nd.text + (nd.kids ? ' (' + (fr ? 'clic' : 'click') + ' : ' + verb + ')' : '') }));
         svg.append(g);
       });
       return svg;

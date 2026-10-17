@@ -5,6 +5,7 @@
   const { s, textW, wrapText, ellipsize, palette, sizeSvg, addDefs } = K;
 
   const lang = () => (typeof navigator !== 'undefined' && navigator.language) || 'fr';
+  const isFr = () => /^fr/i.test(lang());
 
   /* ====================================================================== */
   /* timeline                                                                */
@@ -240,7 +241,7 @@
       const today = Math.floor(Date.now() / 86400000);
       if (today >= minD && today <= maxD) {
         svg.append(s('line', { x1: X(today) + dayW / 2, x2: X(today) + dayW / 2, y1: HEAD - 6, y2: totalH - PAD, class: 'gantt-today' }));
-        svg.append(s('text', { x: X(today) + dayW / 2, y: totalH - 3, class: 'gantt-today-label', 'text-anchor': 'middle', text: 'Aujourd\'hui' }));
+        svg.append(s('text', { x: X(today) + dayW / 2, y: totalH - 3, class: 'gantt-today-label', 'text-anchor': 'middle', text: isFr() ? 'Aujourd\'hui' : 'Today' }));
       }
     }
 
@@ -271,7 +272,7 @@
         }));
         if (t.status === 'active') g.append(s('rect', { x, y: cy - 9, width: w, height: 18, rx: 4, class: 'gantt-active-ring' }));
         const dur = t.endDay - t.startDay;
-        const label = (t.status === 'done' ? '✓ ' : '') + dur + 'j';
+        const label = (t.status === 'done' ? '✓ ' : '') + dur + (isFr() ? 'j' : 'd');
         if (textW(label, 11, 600) + 10 < w) {
           g.append(s('text', { x: x + w / 2, y: cy + 4, class: 'gantt-bar-text', 'text-anchor': 'middle', fill: lum(col) > 0.62 ? '#14181c' : '#ffffff', text: label }));
         }
