@@ -2,7 +2,7 @@
 
 All notable changes to the **RDTMD** project are documented in this file.
 
-## [1.1.0] - 2026-10-17
+## [1.1.0] - 2026-11-01
 
 ### Added
 - **Export**: `RDTMD: Export as HTML` writes a single self-contained file (styles, scripts, data and local images embedded, includes expanded, no network access). `RDTMD: Export as PDF` prints it with an installed Chromium-based browser (Edge, Chrome, Chromium, Brave; `rdtmd.browserPath` to choose), with print-friendly page breaks, and falls back to the system browser's print dialog when none is found.
